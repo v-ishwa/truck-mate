@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:truck_mate/features/main_navigation_screen.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 
@@ -107,7 +108,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
 
     // Simulate Register Request
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(const Duration(seconds: 1), () {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
@@ -122,18 +123,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Successfully registered as ${_selectedRole!.toUpperCase()}! OTP sent to +91 $phone.',
+                  'Successfully registered as ${_selectedRole!.toUpperCase()}! Welcome to TruckMate.',
                 ),
               ),
             ],
           ),
-          backgroundColor: const Color(0xFFFF5500),
+          backgroundColor: const Color(0xFF0095F6),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
           margin: const EdgeInsets.all(16),
         ),
+      );
+
+      // Navigate to Main Navigation Screen and clear the history
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
+        (route) => false,
       );
     });
   }
@@ -181,7 +189,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                           TextSpan(
                             text: 'Account',
-                            style: TextStyle(color: Color(0xFFFF5500)),
+                            style: TextStyle(color: Color(0xFF0095F6)),
                           ),
                         ],
                       ),
@@ -214,22 +222,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     const SizedBox(height: 12),
                     
                     // Role Cards Row
-                    Row(
-                      children: _roles.map((role) {
-                        final isSelected = _selectedRole == role['id'];
-                        return Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                            child: _RoleCard(
-                              label: role['label'],
-                              icon: role['icon'],
-                              description: role['description'],
-                              isSelected: isSelected,
-                              onTap: () => _selectRole(role['id']),
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: _roles.map((role) {
+                          final isSelected = _selectedRole == role['id'];
+                          return Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                              child: _RoleCard(
+                                label: role['label'],
+                                icon: role['icon'],
+                                description: role['description'],
+                                isSelected: isSelected,
+                                onTap: () => _selectRole(role['id']),
+                              ),
                             ),
-                          ),
-                        );
-                      }).toList(),
+                          );
+                        }).toList(),
+                      ),
                     ),
 
                     const SizedBox(height: 32),
@@ -279,7 +290,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         'Log In',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Color(0xFFFF5500),
+                          color: Color(0xFF0095F6),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -327,19 +338,19 @@ class _RoleCard extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeInOut,
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-          height: 120,
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+          constraints: const BoxConstraints(minHeight: 110),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFFFF3ED) : Colors.white,
+            color: isSelected ? const Color(0xFFE3F2FD) : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isSelected ? const Color(0xFFFF5500) : Colors.grey.shade300,
+              color: isSelected ? const Color(0xFF0095F6) : Colors.grey.shade300,
               width: isSelected ? 2.0 : 1.0,
             ),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: const Color(0xFFFF5500).withValues(alpha: 0.12),
+                      color: const Color(0xFF0095F6).withValues(alpha: 0.12),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -354,7 +365,7 @@ class _RoleCard extends StatelessWidget {
               AnimatedTheme(
                 data: ThemeData(
                   iconTheme: IconThemeData(
-                    color: isSelected ? const Color(0xFFFF5500) : Colors.grey.shade600,
+                    color: isSelected ? const Color(0xFF0095F6) : Colors.grey.shade600,
                   ),
                 ),
                 child: Icon(icon, size: 28),
@@ -365,7 +376,7 @@ class _RoleCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                  color: isSelected ? const Color(0xFFFF5500) : Colors.grey.shade800,
+                  color: isSelected ? const Color(0xFF0095F6) : Colors.grey.shade800,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -374,7 +385,7 @@ class _RoleCard extends StatelessWidget {
                 description,
                 style: TextStyle(
                   fontSize: 9,
-                  color: isSelected ? const Color(0xFFFF5500).withValues(alpha: 0.8) : Colors.grey.shade500,
+                  color: isSelected ? const Color(0xFF0095F6).withValues(alpha: 0.8) : Colors.grey.shade500,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 2,

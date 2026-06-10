@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:truck_mate/features/main_navigation_screen.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 import 'signup_screen.dart';
@@ -67,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     // Simulate API request and navigate/show feedback
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(const Duration(seconds: 1), () {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
@@ -77,10 +78,12 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
-            children: [
-              const Icon(Icons.check_circle_rounded, color: Colors.white),
-              const SizedBox(width: 12),
-              Text('OTP sent successfully to +91 $phone!'),
+            children: const [
+              Icon(Icons.check_circle_rounded, color: Colors.white),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text('OTP verified successfully! Welcome back.'),
+              ),
             ],
           ),
           backgroundColor: Colors.green.shade600,
@@ -90,6 +93,13 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           margin: const EdgeInsets.all(16),
         ),
+      );
+
+      // Navigate to Main Navigation Screen and clear the history
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
+        (route) => false,
       );
     });
   }
@@ -104,7 +114,10 @@ class _LoginScreenState extends State<LoginScreen> {
         child: SingleChildScrollView(
           child: Container(
             constraints: BoxConstraints(
-              minHeight: size.height - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
+              minHeight:
+                  size.height -
+                  MediaQuery.of(context).padding.top -
+                  MediaQuery.of(context).padding.bottom,
             ),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: Column(
@@ -135,7 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       padding: const EdgeInsets.all(16),
                       child: Container(
                         decoration: const BoxDecoration(
-                          color: Color(0xFFFF5500),
+                          color: Color(0xFF0095F6),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -161,7 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           TextSpan(
                             text: 'Mate',
-                            style: TextStyle(color: Color(0xFFFF5500)),
+                            style: TextStyle(color: Color(0xFF0095F6)),
                           ),
                         ],
                       ),
@@ -252,7 +265,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             'Sign Up',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Color(0xFFFF5500),
+                              color: Color(0xFF0095F6),
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -262,10 +275,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 24),
                     const Text(
                       'By continuing, you agree to our',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF8E8E8E),
-                      ),
+                      style: TextStyle(fontSize: 12, color: Color(0xFF8E8E8E)),
                     ),
                     const SizedBox(height: 4),
                     Row(
@@ -282,7 +292,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             'Terms of Service',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFFFF5500),
+                              color: Color(0xFF0095F6),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -305,7 +315,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             'Privacy Policy',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFFFF5500),
+                              color: Color(0xFF0095F6),
                               fontWeight: FontWeight.w600,
                             ),
                           ),

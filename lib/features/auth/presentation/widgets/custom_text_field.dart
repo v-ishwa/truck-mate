@@ -67,13 +67,13 @@ class _CustomPhoneFieldState extends State<CustomPhoneField> {
             border: Border.all(
               color: hasError
                   ? Colors.red.shade400
-                  : (_isFocused ? const Color(0xFFFF5500) : Colors.grey.shade300),
+                  : (_isFocused ? const Color(0xFF0095F6) : Colors.grey.shade300),
               width: _isFocused || hasError ? 1.5 : 1.0,
             ),
             boxShadow: _isFocused
                 ? [
                     BoxShadow(
-                      color: const Color(0xFFFF5500).withValues(alpha: 0.08),
+                      color: const Color(0xFF0095F6).withValues(alpha: 0.08),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
                     ),
