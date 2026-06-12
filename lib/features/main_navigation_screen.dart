@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'profile/presentation/screens/profile_screen.dart';
+import 'posts/presentation/screens/posts_feed_screen.dart';
+import 'posts/presentation/screens/add_post_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -9,8 +11,8 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  int _selectedIndex = 3; // Start on the Profile tab (index 3) to show off the profile page first!
-
+  int _selectedIndex = 0; // Start on the Home feed tab (index 0)
+  final GlobalKey<PostsFeedScreenState> _feedKey = GlobalKey<PostsFeedScreenState>();
 
   late final List<Widget> _pages;
 
@@ -18,15 +20,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   void initState() {
     super.initState();
     _pages = [
-      const _PlaceholderScreen(
-        title: 'Home Feed',
-        icon: Icons.home_rounded,
-        description: 'Real-time updates, truck dispatch tracking, and industry news feeds will appear here.',
-      ),
-      const _PlaceholderScreen(
-        title: 'Create Post',
-        icon: Icons.add_box_rounded,
-        description: 'Upload new delivery statuses, photos of cargo, and fleet milestones to the network.',
+      PostsFeedScreen(key: _feedKey),
+      AddPostScreen(
+        onPostPublished: () {
+          setState(() {
+            _selectedIndex = 0; // Redirect to Home Feed tab
+          });
+          // Refresh the feed to show the newly added post
+          _feedKey.currentState?.refreshFeed();
+        },
       ),
       const _PlaceholderScreen(
         title: 'Search Loads & Fleet',

@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:truck_mate/main.dart';
 import '../../domain/entities/profile_post.dart';
 import '../../domain/entities/user_profile.dart';
+import '../../domain/repositories/profile_repository.dart';
+import '../../data/repositories/mock_profile_repository.dart';
 import '../widgets/profile_header.dart';
 import '../widgets/posts_grid.dart';
 import '../widgets/fallback_posts_view.dart';
+import 'package:truck_mate/core/local_storage/datasources/theme_local_datasource.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -14,11 +17,17 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // Mock Data definitions
-  late UserProfile _profile;
-  final List<ProfilePost> _allPosts = [];
+  final ProfileRepository _repository = MockProfileRepository();
+  UserProfile _profile = const UserProfile(
+    name: 'Loading...',
+    role: '',
+    avatarUrl: '',
+    bioLines: [],
+    isJoined: false,
+  );
+  List<ProfilePost> _allPosts = [];
   bool _showEmptyState = false;
-  int _activeTab = 0; // 0 = Grid, 1 = Videos, 2 = Mentions
+  bool _isLoading = true;
 
   // Curated list of premium truck photo URLs from Unsplash
   final List<String> _truckImages = [
@@ -36,105 +45,196 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize user profile
-    _profile = const UserProfile(
-      name: 'Ramesh Transport',
-      role: 'Owner',
-      avatarUrl: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?q=80&w=200&auto=format&fit=crop',
-      bioLines: [
-        'Safe & On-time Delivery 🚚',
-        'Pan India Services',
-        'Contact for load bookings.',
-      ],
-      isJoined: false,
-    );
-
-    // Initialize with mock posts
-    _loadMockPosts();
+    _loadProfileData();
   }
 
-  void _loadMockPosts() {
-    _allPosts.clear();
-    for (int i = 0; i < _truckImages.length; i++) {
-      _allPosts.add(
-        ProfilePost(
-          id: 'post_$i',
-          imageUrl: _truckImages[i],
-          description: 'Proud to deliver safe & on-time load #$i! 🚚💨 #RameshTransport',
-          uploadTime: DateTime.now().subtract(Duration(days: i * 2)),
-        ),
-      );
+  Future<void> _loadProfileData() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      final profile = await _repository.getUserProfile();
+      final posts = await _repository.getUploadedPosts();
+      if (mounted) {
+        setState(() {
+          _profile = profile;
+          _allPosts = posts;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  void _toggleJoin() {
-    setState(() {
-      _profile = _profile.copyWith(isJoined: !_profile.isJoined);
-    });
+  void _toggleJoin() async {
+    try {
+      final updatedProfile = await _repository.toggleJoinMembership();
+      if (mounted) {
+        setState(() {
+          _profile = updatedProfile;
+        });
+      }
 
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              _profile.isJoined ? Icons.check_circle_rounded : Icons.info_outline_rounded,
-              color: Colors.white,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(_profile.isJoined
-                  ? 'Welcome! You have joined Ramesh Transport membership.'
-                  : 'You have left Ramesh Transport membership.'),
-            ),
-          ],
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(
+                _profile.isJoined ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+                color: Colors.white,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(_profile.isJoined
+                    ? 'Welcome! You have joined Ramesh Transport membership.'
+                    : 'You have left Ramesh Transport membership.'),
+              ),
+            ],
+          ),
+          backgroundColor: _profile.isJoined ? Colors.green.shade600 : const Color(0xFF1C1C1C),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 2),
         ),
-        backgroundColor: _profile.isJoined ? Colors.green.shade600 : const Color(0xFF1C1C1C),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+      );
+    } catch (e) {
+      // Handle error
+    }
   }
 
-  void _addMockPost() {
-    setState(() {
+  void _addMockPost() async {
+    try {
       final newIndex = _allPosts.length;
       final imageIndex = newIndex % _truckImages.length;
       final newPost = ProfilePost(
-        id: 'post_$newIndex',
+        id: 'post_custom_${DateTime.now().millisecondsSinceEpoch}',
         imageUrl: _truckImages[imageIndex],
         description: 'New shipment dispatched successfully! 🚚 #TruckMate #RameshTransport',
         uploadTime: DateTime.now(),
       );
-      
-      _allPosts.insert(0, newPost);
-      _showEmptyState = false; // automatically swap to grid view
-    });
 
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: const [
-            Icon(Icons.check_circle_rounded, color: Colors.white),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text('Successfully simulated uploading a new post!'),
+      await _repository.uploadPost(newPost);
+      final posts = await _repository.getUploadedPosts();
+      if (mounted) {
+        setState(() {
+          _allPosts = posts;
+          _showEmptyState = false;
+        });
+      }
+
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.check_circle_rounded, color: Colors.white),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text('Successfully simulated uploading a new post!'),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF0095F6),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+    } catch (e) {
+      // Handle error
+    }
+  }
+
+  void _showThemeSelectionDialog() {
+    final currentMode = MyApp.themeNotifier.value;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF1C1C1C) : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Select Theme',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : const Color(0xFF1C1C1C),
             ),
-          ],
-        ),
-        backgroundColor: const Color(0xFF0095F6),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        margin: const EdgeInsets.all(16),
-      ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<ThemeMode>(
+                title: Text('System Theme', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1C1C1C))),
+                value: ThemeMode.system,
+                groupValue: currentMode,
+                activeColor: const Color(0xFF0095F6),
+                onChanged: (ThemeMode? value) {
+                  if (value != null) {
+                    _updateTheme(value);
+                    Navigator.pop(context);
+                  }
+                },
+              ),
+              RadioListTile<ThemeMode>(
+                title: Text('Light Theme', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1C1C1C))),
+                value: ThemeMode.light,
+                groupValue: currentMode,
+                activeColor: const Color(0xFF0095F6),
+                onChanged: (ThemeMode? value) {
+                  if (value != null) {
+                    _updateTheme(value);
+                    Navigator.pop(context);
+                  }
+                },
+              ),
+              RadioListTile<ThemeMode>(
+                title: Text('Dark Theme', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1C1C1C))),
+                value: ThemeMode.dark,
+                groupValue: currentMode,
+                activeColor: const Color(0xFF0095F6),
+                onChanged: (ThemeMode? value) {
+                  if (value != null) {
+                    _updateTheme(value);
+                    Navigator.pop(context);
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
+  }
+
+  void _updateTheme(ThemeMode mode) {
+    MyApp.themeNotifier.value = mode;
+    String modeStr;
+    switch (mode) {
+      case ThemeMode.dark:
+        modeStr = 'dark';
+        break;
+      case ThemeMode.light:
+        modeStr = 'light';
+        break;
+      case ThemeMode.system:
+      default:
+        modeStr = 'system';
+        break;
+    }
+    ThemeLocalDatasource().saveThemeMode(modeStr);
   }
 
   void _showPostDetails(ProfilePost post) {
@@ -225,16 +325,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 setState(() {
                   _showEmptyState = !_showEmptyState;
                 });
-              } else if (value == 'toggle_theme') {
-                final currentMode = MyApp.themeNotifier.value;
-                MyApp.themeNotifier.value =
-                    currentMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+              } else if (value == 'change_theme') {
+                _showThemeSelectionDialog();
               } else if (value == 'reset') {
-                setState(() {
-                  _showEmptyState = false;
-                  _loadMockPosts();
-                  _profile = _profile.copyWith(isJoined: false);
-                });
+                (_repository as MockProfileRepository).resetMockData();
+                _loadProfileData();
               } else if (value == 'add_mock') {
                 _addMockPost();
               }
@@ -265,16 +360,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               PopupMenuItem(
-                value: 'toggle_theme',
+                value: 'change_theme',
                 child: Row(
-                  children: [
+                  children: const [
                     Icon(
-                      isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                      Icons.palette_outlined,
                       size: 20,
-                      color: const Color(0xFF0095F6),
+                      color: Color(0xFF0095F6),
                     ),
                     const SizedBox(width: 10),
-                    Text(isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'),
+                    Text('Change Theme'),
                   ],
                 ),
               ),
@@ -294,108 +389,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            // Simulate refresh action
-            await Future.delayed(const Duration(seconds: 1));
-            setState(() {
-              if (_showEmptyState) {
-                _showEmptyState = false;
-              }
-              _loadMockPosts();
-            });
-          },
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              // Header & Bio
-              SliverToBoxAdapter(
-                child: ProfileHeader(
-                  profile: _profile,
-                  onJoinToggled: _toggleJoin,
-                ),
-              ),
-
-              // Tab bars matching the UI design (Grid, Reels, Tagged)
-              SliverToBoxAdapter(
-                child: Container(
-                  decoration: BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: isDark ? const Color(0xFF262626) : Colors.grey.shade200, width: 0.5),
-                      bottom: BorderSide(color: isDark ? const Color(0xFF262626) : Colors.grey.shade200, width: 0.5),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: Color(0xFF0095F6)))
+            : RefreshIndicator(
+                onRefresh: () async {
+                  final posts = await _repository.getUploadedPosts();
+                  if (mounted) {
+                    setState(() {
+                      _allPosts = posts;
+                      if (_showEmptyState) {
+                        _showEmptyState = false;
+                      }
+                    });
+                  }
+                },
+                color: const Color(0xFF0095F6),
+                child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    // Header & Bio
+                    SliverToBoxAdapter(
+                      child: ProfileHeader(
+                        profile: _profile,
+                        onJoinToggled: _toggleJoin,
+                      ),
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      _buildTabButton(0, Icons.grid_on_sharp),
-                      _buildTabButton(1, Icons.video_library_outlined),
-                      _buildTabButton(2, Icons.account_box_outlined),
-                    ],
-                  ),
+
+                    // Post content or fallback
+                    if (isEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: FallbackPostsView(
+                          onUploadPressed: _addMockPost,
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.only(top: 2),
+                        sliver: SliverToBoxAdapter(
+                          child: PostsGrid(
+                            posts: _allPosts,
+                            onPostTap: _showPostDetails,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-
-              // Post content or fallback
-              if (isEmpty)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: FallbackPostsView(
-                    onUploadPressed: _addMockPost,
-                  ),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.only(top: 2),
-                  sliver: SliverToBoxAdapter(
-                    child: PostsGrid(
-                      posts: _allPosts,
-                      onPostTap: _showPostDetails,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTabButton(int index, IconData icon) {
-    final isSelected = _activeTab == index;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Expanded(
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            _activeTab = index;
-            // For mock logic: Video & Mention tabs can simulate empty fallback, grid tab has our data
-            if (index != 0) {
-              _showEmptyState = true;
-            } else {
-              _showEmptyState = false;
-            }
-          });
-        },
-        child: Container(
-          height: 48,
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: isSelected 
-                    ? (isDark ? Colors.white : const Color(0xFF1C1C1C)) 
-                    : Colors.transparent,
-                width: 2.0,
-              ),
-            ),
-          ),
-          child: Icon(
-            icon,
-            color: isSelected 
-                ? (isDark ? Colors.white : const Color(0xFF1C1C1C)) 
-                : Colors.grey.shade400,
-            size: 24,
-          ),
-        ),
       ),
     );
   }

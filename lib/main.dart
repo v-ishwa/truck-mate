@@ -1,14 +1,32 @@
 import 'package:flutter/material.dart';
-// ignore: unused_import
-import 'package:truck_mate/features/profile/presentation/screens/profile_screen.dart';
+import 'package:flutter/services.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
+import 'core/local_storage/datasources/theme_local_datasource.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final themeDatasource = ThemeLocalDatasource();
+  await themeDatasource.init();
+  final savedThemeMode = await themeDatasource.getThemeMode();
+
+  ThemeMode initialTheme;
+  if (savedThemeMode == 'dark') {
+    initialTheme = ThemeMode.dark;
+  } else if (savedThemeMode == 'light') {
+    initialTheme = ThemeMode.light;
+  } else {
+    initialTheme = ThemeMode.system;
+  }
+
+  MyApp.themeNotifier.value = initialTheme;
+
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  static final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
+  static final ValueNotifier<ThemeMode> themeNotifier =
+      ValueNotifier<ThemeMode>(ThemeMode.system);
 
   const MyApp({super.key});
 
@@ -18,38 +36,57 @@ class MyApp extends StatelessWidget {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
       builder: (context, currentMode, _) {
-        return MaterialApp(
-          title: 'Truck Mate',
-          debugShowCheckedModeBanner: false,
-          themeMode: currentMode,
-          theme: ThemeData(
-            brightness: Brightness.light,
-            colorScheme: ColorScheme.fromSeed(
+        final isDark = currentMode == ThemeMode.dark ||
+            (currentMode == ThemeMode.system &&
+                MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+        final systemUiOverlayStyle = SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+          statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+          systemNavigationBarColor: isDark ? Colors.black : Colors.white,
+          systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        );
+
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: systemUiOverlayStyle,
+          child: MaterialApp(
+            title: 'Truck Mate',
+            debugShowCheckedModeBanner: false,
+            themeMode: currentMode,
+            theme: ThemeData(
               brightness: Brightness.light,
-              seedColor: const Color(0xFF0095F6),
-              primary: const Color(0xFF0095F6),
+              appBarTheme: const AppBarTheme(
+                systemOverlayStyle: SystemUiOverlayStyle.dark,
+              ),
+              colorScheme: ColorScheme.fromSeed(
+                brightness: Brightness.light,
+                seedColor: const Color(0xFF0095F6),
+                primary: const Color(0xFF0095F6),
+              ),
+              scaffoldBackgroundColor: Colors.white,
+              useMaterial3: true,
             ),
-            scaffoldBackgroundColor: Colors.white,
-            useMaterial3: true,
-          ),
-          darkTheme: ThemeData(
-            brightness: Brightness.dark,
-            scaffoldBackgroundColor: Colors.black,
-            appBarTheme: const AppBarTheme(
-              backgroundColor: Colors.black,
-              elevation: 0,
-            ),
-            colorScheme: ColorScheme.fromSeed(
+            darkTheme: ThemeData(
               brightness: Brightness.dark,
-              seedColor: const Color(0xFF0095F6),
-              primary: const Color(0xFF0095F6),
-              surface: Colors.black,
+              scaffoldBackgroundColor: Colors.black,
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Colors.black,
+                elevation: 0,
+                systemOverlayStyle: SystemUiOverlayStyle.light,
+              ),
+              colorScheme: ColorScheme.fromSeed(
+                brightness: Brightness.dark,
+                seedColor: const Color(0xFF0095F6),
+                primary: const Color(0xFF0095F6),
+                surface: Colors.black,
+              ),
+              useMaterial3: true,
             ),
-            useMaterial3: true,
+            home: const LoginScreen(),
           ),
-          home: const LoginScreen(),
         );
       },
     );
   }
 }
+

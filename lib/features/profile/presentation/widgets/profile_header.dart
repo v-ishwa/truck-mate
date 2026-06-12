@@ -55,6 +55,16 @@ class _ProfileHeaderState extends State<ProfileHeader> with SingleTickerProvider
     final isJoined = widget.profile.isJoined;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final defaultAvatar = Container(
+      color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF0F0F0),
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.person_rounded,
+        color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
+        size: 44,
+      ),
+    );
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
@@ -84,20 +94,13 @@ class _ProfileHeaderState extends State<ProfileHeader> with SingleTickerProvider
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(45),
-                  child: Image.network(
-                    widget.profile.avatarUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: const Color(0xFF0095F6).withValues(alpha: 0.1),
-                        child: const Icon(
-                          Icons.local_shipping_rounded,
-                          color: Color(0xFF0095F6),
-                          size: 40,
-                        ),
-                      );
-                    },
-                  ),
+                  child: widget.profile.avatarUrl.isNotEmpty
+                      ? Image.network(
+                          widget.profile.avatarUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => defaultAvatar,
+                        )
+                      : defaultAvatar,
                 ),
               ),
               const SizedBox(width: 32),

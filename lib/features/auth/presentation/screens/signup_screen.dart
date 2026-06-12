@@ -11,10 +11,16 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
+  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _dobController = TextEditingController();
+  DateTime? _selectedDob;
+
   String? _selectedRole;
   bool _isLoading = false;
+  String? _nameErrorText;
   String? _errorText;
+  String? _dobErrorText;
   bool _isButtonEnabled = false;
 
   final List<Map<String, dynamic>> _roles = [
@@ -41,13 +47,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   void initState() {
     super.initState();
+    _nameController.addListener(_validateForm);
     _phoneController.addListener(_validateForm);
   }
 
   @override
   void dispose() {
+    _nameController.removeListener(_validateForm);
+    _nameController.dispose();
     _phoneController.removeListener(_validateForm);
     _phoneController.dispose();
+    _dobController.dispose();
     super.dispose();
   }
 
@@ -62,27 +72,111 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
   }
 
+  int _calculateAge(DateTime birthDate) {
+    final today = DateTime.now();
+    int age = today.year - birthDate.year;
+    if (today.month < birthDate.month ||
+        (today.month == birthDate.month && today.day < birthDate.day)) {
+      age--;
+    }
+    return age;
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime today = DateTime.now();
+    final DateTime initialDate = DateTime(
+      today.year - 18,
+      today.month,
+      today.day,
+    );
+    final DateTime firstDate = DateTime(today.year - 100);
+    final DateTime lastDate = today;
+
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDob ?? initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF0095F6),
+              onPrimary: Colors.white,
+              onSurface: Color(0xFF1C1C1C),
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF0095F6),
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null && picked != _selectedDob) {
+      setState(() {
+        _selectedDob = picked;
+        final age = _calculateAge(picked);
+        _dobController.text =
+            "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year} (Age: $age)";
+      });
+      _validateForm();
+    }
+  }
+
   void _validateForm() {
-    final text = _phoneController.text.trim();
+    final nameText = _nameController.text.trim();
+    final phoneText = _phoneController.text.trim();
+
     setState(() {
-      // Input verification
-      if (text.isEmpty) {
-        _errorText = null;
-        _isButtonEnabled = false;
-      } else if (text.length == 10 && RegExp(r'^[0-9]+$').hasMatch(text)) {
-        _errorText = null;
-        // Enabled only if a role is also selected
-        _isButtonEnabled = _selectedRole != null;
+      // Name validation
+      if (nameText.isEmpty) {
+        _nameErrorText = null;
+      } else if (nameText.length < 2) {
+        _nameErrorText = 'Name must be at least 2 characters';
       } else {
-        _isButtonEnabled = false;
-        if (text.length > 10) {
+        _nameErrorText = null;
+      }
+
+      // Phone validation
+      if (phoneText.isEmpty) {
+        _errorText = null;
+      } else if (phoneText.length == 10 &&
+          RegExp(r'^[0-9]+$').hasMatch(phoneText)) {
+        _errorText = null;
+      } else {
+        if (phoneText.length > 10) {
           _errorText = 'Mobile number cannot exceed 10 digits';
-        } else if (!RegExp(r'^[0-9]*$').hasMatch(text)) {
+        } else if (!RegExp(r'^[0-9]*$').hasMatch(phoneText)) {
           _errorText = 'Please enter numbers only';
         } else {
           _errorText = null;
         }
       }
+
+      // Age validation
+      if (_selectedDob != null) {
+        final age = _calculateAge(_selectedDob!);
+        if (age < 18) {
+          _dobErrorText = 'You must be at least 18 years old';
+        } else {
+          _dobErrorText = null;
+        }
+      } else {
+        _dobErrorText = null;
+      }
+
+      final isNameValid = nameText.length >= 2;
+      final isPhoneValid =
+          phoneText.length == 10 && RegExp(r'^[0-9]+$').hasMatch(phoneText);
+      final isDobValid =
+          _selectedDob != null && _calculateAge(_selectedDob!) >= 18;
+
+      _isButtonEnabled =
+          _selectedRole != null && isNameValid && isPhoneValid && isDobValid;
     });
   }
 
@@ -94,6 +188,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
+    final name = _nameController.text.trim();
+    if (name.length < 2) {
+      setState(() {
+        _nameErrorText = 'Enter a valid name';
+      });
+      return;
+    }
+
     final phone = _phoneController.text.trim();
     if (phone.length != 10) {
       setState(() {
@@ -102,9 +204,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
+    if (_selectedDob == null) {
+      setState(() {
+        _dobErrorText = 'Please select your date of birth';
+      });
+      return;
+    }
+
+    final age = _calculateAge(_selectedDob!);
+    if (age < 18) {
+      setState(() {
+        _dobErrorText = 'You must be at least 18 years old';
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
+      _nameErrorText = null;
       _errorText = null;
+      _dobErrorText = null;
     });
 
     // Simulate Register Request
@@ -123,7 +242,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Successfully registered as ${_selectedRole!.toUpperCase()}! Welcome to TruckMate.',
+                  'Successfully registered $name as ${_selectedRole!.toUpperCase()}! Welcome to TruckMate.',
                 ),
               ),
             ],
@@ -149,14 +268,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF1C1C1C), size: 20),
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: isDark ? Colors.white : const Color(0xFF1C1C1C),
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -164,7 +288,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
         child: SingleChildScrollView(
           child: Container(
             constraints: BoxConstraints(
-              minHeight: size.height - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom - kToolbarHeight,
+              minHeight:
+                  size.height -
+                  MediaQuery.of(context).padding.top -
+                  MediaQuery.of(context).padding.bottom -
+                  kToolbarHeight,
             ),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             child: Column(
@@ -176,17 +304,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     RichText(
-                      text: const TextSpan(
+                      text: TextSpan(
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
                           letterSpacing: -0.5,
+                          color: isDark
+                              ? Colors.white
+                              : const Color(0xFF1C1C1C),
                         ),
-                        children: [
-                          TextSpan(
-                            text: 'Create ',
-                            style: TextStyle(color: Color(0xFF1C1C1C)),
-                          ),
+                        children: const [
+                          TextSpan(text: 'Create '),
                           TextSpan(
                             text: 'Account',
                             style: TextStyle(color: Color(0xFF0095F6)),
@@ -199,7 +327,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       'Join TruckMate and select your service category.',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey.shade600,
+                        color: isDark
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade600,
                       ),
                     ),
                   ],
@@ -211,16 +341,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Select Your Role',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF1C1C1C),
+                        color: isDark ? Colors.white : const Color(0xFF1C1C1C),
                       ),
                     ),
                     const SizedBox(height: 12),
-                    
+
                     // Role Cards Row
                     IntrinsicHeight(
                       child: Row(
@@ -229,7 +359,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           final isSelected = _selectedRole == role['id'];
                           return Expanded(
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4.0,
+                              ),
                               child: _RoleCard(
                                 label: role['label'],
                                 icon: role['icon'],
@@ -245,12 +377,30 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     const SizedBox(height: 32),
 
-                    const Text(
+                    Text(
+                      'Full Name',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white : const Color(0xFF1C1C1C),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    CustomTextField(
+                      controller: _nameController,
+                      hintText: 'Enter Full Name',
+                      prefixIcon: Icons.person_outline_rounded,
+                      errorText: _nameErrorText,
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    Text(
                       'Mobile Number',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF1C1C1C),
+                        color: isDark ? Colors.white : const Color(0xFF1C1C1C),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -259,8 +409,35 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       errorText: _errorText,
                     ),
 
+                    const SizedBox(height: 20),
+
+                    Text(
+                      'Date of Birth',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white : const Color(0xFF1C1C1C),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    CustomTextField(
+                      controller: _dobController,
+                      hintText: 'Select Date of Birth',
+                      prefixIcon: Icons.calendar_month_outlined,
+                      readOnly: true,
+                      onTap: () => _selectDate(context),
+                      errorText: _dobErrorText,
+                      suffixIcon: IconButton(
+                        icon: const Icon(
+                          Icons.arrow_drop_down_rounded,
+                          color: Colors.grey,
+                        ),
+                        onPressed: () => _selectDate(context),
+                      ),
+                    ),
+
                     const SizedBox(height: 32),
-                    
+
                     CustomButton(
                       text: 'Sign Up',
                       onPressed: _isButtonEnabled ? _handleSignUp : null,
@@ -279,7 +456,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       'Already have an account? ',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey.shade600,
+                        color: isDark
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade600,
                       ),
                     ),
                     GestureDetector(
@@ -324,14 +503,12 @@ class _RoleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 1.0, end: isSelected ? 1.03 : 1.0),
       duration: const Duration(milliseconds: 150),
       builder: (context, scale, child) {
-        return Transform.scale(
-          scale: scale,
-          child: child,
-        );
+        return Transform.scale(scale: scale, child: child);
       },
       child: GestureDetector(
         onTap: onTap,
@@ -341,10 +518,16 @@ class _RoleCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
           constraints: const BoxConstraints(minHeight: 110),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFE3F2FD) : Colors.white,
+            color: isSelected
+                ? (isDark
+                      ? const Color(0xFF0095F6).withValues(alpha: 0.2)
+                      : const Color(0xFFE3F2FD))
+                : (isDark ? const Color(0xFF1E1E1E) : Colors.white),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isSelected ? const Color(0xFF0095F6) : Colors.grey.shade300,
+              color: isSelected
+                  ? const Color(0xFF0095F6)
+                  : (isDark ? Colors.grey.shade800 : Colors.grey.shade300),
               width: isSelected ? 2.0 : 1.0,
             ),
             boxShadow: isSelected
@@ -365,7 +548,11 @@ class _RoleCard extends StatelessWidget {
               AnimatedTheme(
                 data: ThemeData(
                   iconTheme: IconThemeData(
-                    color: isSelected ? const Color(0xFF0095F6) : Colors.grey.shade600,
+                    color: isSelected
+                        ? const Color(0xFF0095F6)
+                        : (isDark
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600),
                   ),
                 ),
                 child: Icon(icon, size: 28),
@@ -376,7 +563,9 @@ class _RoleCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                  color: isSelected ? const Color(0xFF0095F6) : Colors.grey.shade800,
+                  color: isSelected
+                      ? const Color(0xFF0095F6)
+                      : (isDark ? Colors.white : Colors.grey.shade800),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -385,7 +574,9 @@ class _RoleCard extends StatelessWidget {
                 description,
                 style: TextStyle(
                   fontSize: 9,
-                  color: isSelected ? const Color(0xFF0095F6).withValues(alpha: 0.8) : Colors.grey.shade500,
+                  color: isSelected
+                      ? const Color(0xFF0095F6).withValues(alpha: 0.8)
+                      : (isDark ? Colors.grey.shade400 : Colors.grey.shade500),
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 2,

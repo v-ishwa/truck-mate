@@ -19,6 +19,35 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
+subprojects {
+    plugins.withId("com.android.library") {
+        extensions.configure<com.android.build.gradle.BaseExtension> {
+            if (namespace == null) {
+                val namespaceString = project.group.toString()
+                namespace = if (namespaceString.isNotEmpty()) {
+                    namespaceString
+                } else {
+                    "dev.flutter.plugins.${project.name.replace("-", "_").replace(" ", "_")}"
+                }
+            }
+        }
+    }
+    plugins.withId("com.android.application") {
+        extensions.configure<com.android.build.gradle.BaseExtension> {
+            if (namespace == null) {
+                val namespaceString = project.group.toString()
+                namespace = if (namespaceString.isNotEmpty()) {
+                    namespaceString
+                } else {
+                    "dev.flutter.plugins.${project.name.replace("-", "_").replace(" ", "_")}"
+                }
+            }
+        }
+    }
+}
+
+
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
+
