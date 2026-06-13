@@ -368,7 +368,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       size: 20,
                       color: Color(0xFF0095F6),
                     ),
-                    const SizedBox(width: 10),
+                    SizedBox(width: 10),
                     Text('Change Theme'),
                   ],
                 ),
