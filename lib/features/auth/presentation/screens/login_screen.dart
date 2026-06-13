@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:truck_mate/features/main_navigation_screen.dart';
+import '../../data/repositories/auth_repository_impl.dart';
+import '../../domain/repositories/auth_repository.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 import 'signup_screen.dart';
@@ -12,6 +14,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final AuthRepository _authRepository = AuthRepositoryImpl();
   final TextEditingController _phoneController = TextEditingController();
   bool _isLoading = false;
   String? _errorText;
@@ -53,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
-  void _handleLogin() {
+  Future<void> _handleLogin() async {
     final phone = _phoneController.text.trim();
     if (phone.length != 10) {
       setState(() {
@@ -67,13 +70,14 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorText = null;
     });
 
-    // Simulate API request and navigate/show feedback
-    Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
+    final response = await _authRepository.loginWithPhoneNumber(phone);
 
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (response.success) {
       // Show success feedback
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -81,7 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
             children: const [
               Icon(Icons.check_circle_rounded, color: Colors.white),
               SizedBox(width: 12),
-              Expanded(child: Text('OTP verified successfully! Welcome back.')),
+              Expanded(child: Text('Login successful! Welcome back.')),
             ],
           ),
           backgroundColor: Colors.green.shade600,
@@ -99,7 +103,28 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
         (route) => false,
       );
-    });
+    } else {
+      // Show failure feedback
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline_rounded, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(response.message),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+    }
   }
 
   @override

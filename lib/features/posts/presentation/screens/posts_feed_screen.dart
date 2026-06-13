@@ -131,7 +131,11 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.green.shade200, width: 2),
                 ),
-                child: Icon(Icons.phone_in_talk_rounded, color: Colors.green.shade700, size: 36),
+                child: Icon(
+                  Icons.phone_in_talk_rounded,
+                  color: Colors.green.shade700,
+                  size: 36,
+                ),
               ),
               const SizedBox(height: 20),
               Text(
@@ -148,7 +152,9 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: isDark ? const Color(0xFF64B5F6) : const Color(0xFF0095F6),
+                  color: isDark
+                      ? const Color(0xFF64B5F6)
+                      : const Color(0xFF0095F6),
                 ),
               ),
               const SizedBox(height: 24),
@@ -162,12 +168,18 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        side: BorderSide(color: isDark ? const Color(0xFF333333) : Colors.grey.shade300),
+                        side: BorderSide(
+                          color: isDark
+                              ? const Color(0xFF333333)
+                              : Colors.grey.shade300,
+                        ),
                       ),
                       child: Text(
                         'Cancel',
                         style: TextStyle(
-                          color: isDark ? Colors.white70 : const Color(0xFF1C1C1C),
+                          color: isDark
+                              ? Colors.white70
+                              : const Color(0xFF1C1C1C),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -180,7 +192,9 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('Simulating call to ${post.userName}... 📞'),
+                            content: Text(
+                              'Simulating call to ${post.userName}... 📞',
+                            ),
                             backgroundColor: const Color(0xFF0095F6),
                             behavior: SnackBarBehavior.floating,
                             shape: RoundedRectangleBorder(
@@ -246,7 +260,9 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                 onTap: () {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Sharing capability coming soon!')),
+                    const SnackBar(
+                      content: Text('Sharing capability coming soon!'),
+                    ),
                   );
                 },
               ),
@@ -261,12 +277,20 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.report_problem_outlined, color: Colors.redAccent),
-                title: const Text('Report Post', style: TextStyle(color: Colors.redAccent)),
+                leading: const Icon(
+                  Icons.report_problem_outlined,
+                  color: Colors.redAccent,
+                ),
+                title: const Text(
+                  'Report Post',
+                  style: TextStyle(color: Colors.redAccent),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Thank you, this post has been reported.')),
+                    const SnackBar(
+                      content: Text('Thank you, this post has been reported.'),
+                    ),
                   );
                 },
               ),
@@ -324,7 +348,11 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                 ),
                 child: const Text(
                   'Apply Filters',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ],
@@ -350,7 +378,9 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(
-          color: isSelected ? const Color(0xFF0095F6) : (isDark ? const Color(0xFF262626) : Colors.grey.shade300),
+          color: isSelected
+              ? const Color(0xFF0095F6)
+              : (isDark ? const Color(0xFF262626) : Colors.grey.shade300),
         ),
       ),
     );
@@ -359,12 +389,13 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     final filteredPosts = _posts.where((post) {
       if (_searchQuery.isEmpty) return true;
       final query = _searchQuery.toLowerCase();
       final statusMatch = post.statusText.toLowerCase().contains(query);
-      final fromMatch = post.fromLocation?.toLowerCase().contains(query) ?? false;
+      final fromMatch =
+          post.fromLocation?.toLowerCase().contains(query) ?? false;
       final toMatch = post.toLocation?.toLowerCase().contains(query) ?? false;
       final nameMatch = post.userName.toLowerCase().contains(query);
       return statusMatch || fromMatch || toMatch || nameMatch;
@@ -385,16 +416,14 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
             ),
             children: [
               TextSpan(
-                text: 'truck',
-                style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1C1C1C)),
+                text: 'Truck',
+                style: TextStyle(
+                  color: isDark ? Colors.white : const Color(0xFF1C1C1C),
+                ),
               ),
               const TextSpan(
-                text: '.',
-                style: TextStyle(color: Color(0xFFFF6F00)),
-              ),
-              const TextSpan(
-                text: 'mate',
-                style: TextStyle(color: Color(0xFFFF6F00)),
+                text: 'Mate',
+                style: TextStyle(color: Color(0xFF0095F6)),
               ),
             ],
           ),
@@ -405,17 +434,24 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
           children: [
             // Location Search and Filter row
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
               child: Row(
                 children: [
                   Expanded(
                     child: Container(
                       height: 46,
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF161616) : Colors.grey.shade50,
+                        color: isDark
+                            ? const Color(0xFF161616)
+                            : Colors.grey.shade50,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: isDark ? const Color(0xFF262626) : Colors.grey.shade200,
+                          color: isDark
+                              ? const Color(0xFF262626)
+                              : Colors.grey.shade200,
                           width: 1,
                         ),
                       ),
@@ -424,7 +460,9 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                         children: [
                           Icon(
                             Icons.location_on_outlined,
-                            color: isDark ? Colors.white60 : Colors.grey.shade600,
+                            color: isDark
+                                ? Colors.white60
+                                : Colors.grey.shade600,
                             size: 20,
                           ),
                           const SizedBox(width: 8),
@@ -437,12 +475,16 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                               },
                               style: TextStyle(
                                 fontSize: 14,
-                                color: isDark ? Colors.white : const Color(0xFF1C1C1C),
+                                color: isDark
+                                    ? Colors.white
+                                    : const Color(0xFF1C1C1C),
                               ),
                               decoration: InputDecoration(
                                 hintText: 'Search by location',
                                 hintStyle: TextStyle(
-                                  color: isDark ? Colors.white38 : Colors.grey.shade400,
+                                  color: isDark
+                                      ? Colors.white38
+                                      : Colors.grey.shade400,
                                   fontSize: 14,
                                 ),
                                 border: InputBorder.none,
@@ -465,7 +507,9 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                         color: isDark ? Colors.black : Colors.white,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: isDark ? const Color(0xFF262626) : Colors.grey.shade200,
+                          color: isDark
+                              ? const Color(0xFF262626)
+                              : Colors.grey.shade200,
                           width: 1,
                         ),
                       ),
@@ -473,7 +517,9 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                         children: [
                           Icon(
                             Icons.tune_rounded,
-                            color: isDark ? Colors.white : const Color(0xFF1C1C1C),
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF1C1C1C),
                             size: 18,
                           ),
                           const SizedBox(width: 6),
@@ -482,7 +528,9 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : const Color(0xFF1C1C1C),
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF1C1C1C),
                             ),
                           ),
                         ],
@@ -492,7 +540,7 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                 ],
               ),
             ),
-            
+
             // Feed List
             Expanded(
               child: _isLoading
@@ -507,14 +555,19 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                       child: filteredPosts.isEmpty
                           ? ListView(
                               children: [
-                                SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                                SizedBox(
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.2,
+                                ),
                                 Center(
                                   child: Column(
                                     children: [
                                       Icon(
                                         Icons.search_off_rounded,
                                         size: 64,
-                                        color: isDark ? Colors.white30 : Colors.grey.shade300,
+                                        color: isDark
+                                            ? Colors.white30
+                                            : Colors.grey.shade300,
                                       ),
                                       const SizedBox(height: 16),
                                       Text(
@@ -522,7 +575,9 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
-                                          color: isDark ? Colors.white70 : Colors.grey.shade600,
+                                          color: isDark
+                                              ? Colors.white70
+                                              : Colors.grey.shade600,
                                         ),
                                       ),
                                     ],
@@ -539,9 +594,11 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                                 return PostCard(
                                   post: post,
                                   onLikePressed: () => _handleLike(post.id),
-                                  onBookmarkPressed: () => _handleBookmark(post.id),
+                                  onBookmarkPressed: () =>
+                                      _handleBookmark(post.id),
                                   onCallPressed: () => _handleCallOwner(post),
-                                  onMoreMenuPressed: () => _handleMoreOptions(post),
+                                  onMoreMenuPressed: () =>
+                                      _handleMoreOptions(post),
                                 );
                               },
                             ),

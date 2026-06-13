@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:truck_mate/features/main_navigation_screen.dart';
+import '../../data/repositories/auth_repository_impl.dart';
+import '../../domain/repositories/auth_repository.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
 
@@ -11,6 +13,7 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
+  final AuthRepository _authRepository = AuthRepositoryImpl();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _dobController = TextEditingController();
@@ -180,7 +183,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
   }
 
-  void _handleSignUp() {
+  Future<void> _handleSignUp() async {
     if (_selectedRole == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select your role to proceed.')),
@@ -226,13 +229,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
       _dobErrorText = null;
     });
 
-    // Simulate Register Request
-    Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
+    final response = await _authRepository.register(
+      name: name,
+      mobileNumber: phone,
+      dob: _selectedDob!,
+      role: _selectedRole!,
+    );
 
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (response.success) {
       // Show success feedback
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -242,7 +251,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Successfully registered $name as ${_selectedRole!.toUpperCase()}! Welcome to TruckMate.',
+                  response.message.isNotEmpty
+                      ? response.message
+                      : 'Successfully registered $name as ${_selectedRole!.toUpperCase()}! Welcome to TruckMate.',
                 ),
               ),
             ],
@@ -262,7 +273,28 @@ class _SignUpScreenState extends State<SignUpScreen> {
         MaterialPageRoute(builder: (context) => const MainNavigationScreen()),
         (route) => false,
       );
-    });
+    } else {
+      // Show failure feedback
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline_rounded, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(response.message),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+    }
   }
 
   @override
