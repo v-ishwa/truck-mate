@@ -98,8 +98,11 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
                     ),
                   ),
                   child: CircleAvatar(
-                    backgroundImage: NetworkImage(post.avatarUrl),
+                    backgroundImage: post.avatarUrl.isNotEmpty ? NetworkImage(post.avatarUrl) : null,
                     radius: 20,
+                    child: post.avatarUrl.isEmpty
+                        ? Icon(Icons.person, size: 24, color: isDark ? Colors.white70 : Colors.grey)
+                        : null,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -163,6 +166,7 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
           ),
           
           // 3. Main Post Image (Interactive with Double-Tap to Like animation)
+          if (post.imageUrl.isNotEmpty)
           GestureDetector(
             onDoubleTap: _handleDoubleTap,
             child: Stack(
@@ -185,6 +189,18 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
                                 color: Color(0xFF0095F6),
+                              ),
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: isDark ? const Color(0xFF161616) : Colors.grey.shade100,
+                            child: Center(
+                              child: Icon(
+                                Icons.broken_image_rounded,
+                                size: 48,
+                                color: isDark ? Colors.white24 : Colors.grey.shade300,
                               ),
                             ),
                           );

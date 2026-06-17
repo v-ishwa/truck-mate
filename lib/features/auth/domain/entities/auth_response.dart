@@ -5,12 +5,26 @@ class AuthResponse {
   final int? userId;
   final bool? profileCompleted;
 
+  // User detail fields
+  final String? name;
+  final String? mobileNumber;
+  final String? role;
+  final String? city;
+  final String? profilePicture;
+  final String? dob;
+
   const AuthResponse({
     required this.success,
     required this.message,
     this.token,
     this.userId,
     this.profileCompleted,
+    this.name,
+    this.mobileNumber,
+    this.role,
+    this.city,
+    this.profilePicture,
+    this.dob,
   });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
@@ -20,6 +34,12 @@ class AuthResponse {
       token: json['token'],
       userId: json['userId'],
       profileCompleted: json['profileCompleted'],
+      name: json['name'],
+      mobileNumber: json['mobileNumber'],
+      role: json['role'],
+      city: json['city'],
+      profilePicture: json['profilePicture'],
+      dob: json['dob'],
     );
   }
 }

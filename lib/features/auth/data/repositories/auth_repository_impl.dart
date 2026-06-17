@@ -10,6 +10,32 @@ class AuthRepositoryImpl implements AuthRepository {
 
   AuthRepositoryImpl({http.Client? client}) : client = client ?? http.Client();
 
+  /// Saves auth token and user info to SharedPreferences
+  Future<void> _saveAuthData(AuthResponse response) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (response.token != null) {
+      await prefs.setString('auth_token', response.token!);
+    }
+    if (response.userId != null) {
+      await prefs.setInt('user_id', response.userId!);
+    }
+    if (response.name != null) {
+      await prefs.setString('user_name', response.name!);
+    }
+    if (response.mobileNumber != null) {
+      await prefs.setString('user_mobile', response.mobileNumber!);
+    }
+    if (response.role != null) {
+      await prefs.setString('user_role', response.role!);
+    }
+    if (response.city != null) {
+      await prefs.setString('user_city', response.city!);
+    }
+    if (response.profilePicture != null) {
+      await prefs.setString('user_profile_picture', response.profilePicture!);
+    }
+  }
+
   @override
   Future<AuthResponse> register({
     required String name,
@@ -35,7 +61,11 @@ class AuthRepositoryImpl implements AuthRepository {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        return AuthResponse.fromJson(data);
+        final authResponse = AuthResponse.fromJson(data);
+        if (authResponse.success && authResponse.token != null) {
+          await _saveAuthData(authResponse);
+        }
+        return authResponse;
       } else {
         return AuthResponse(
           success: false,
@@ -70,11 +100,7 @@ class AuthRepositoryImpl implements AuthRepository {
         final data = json.decode(response.body);
         final authResponse = AuthResponse.fromJson(data);
         if (authResponse.success && authResponse.token != null) {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('auth_token', authResponse.token!);
-          if (authResponse.userId != null) {
-            await prefs.setInt('user_id', authResponse.userId!);
-          }
+          await _saveAuthData(authResponse);
         }
         return authResponse;
       } else {
@@ -100,5 +126,10 @@ class AuthRepositoryImpl implements AuthRepository {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
     await prefs.remove('user_id');
+    await prefs.remove('user_name');
+    await prefs.remove('user_mobile');
+    await prefs.remove('user_role');
+    await prefs.remove('user_city');
+    await prefs.remove('user_profile_picture');
   }
 }

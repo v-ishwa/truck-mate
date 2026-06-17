@@ -1,3 +1,5 @@
+import '../../../../core/network/api_constants.dart';
+
 class Post {
   final String id;
   final String userName;
@@ -38,6 +40,90 @@ class Post {
     this.departureTime,
     this.contactNumber,
   });
+
+  /// Create a Post from backend JSON response
+  factory Post.fromJson(Map<String, dynamic> json) {
+    final from = json['fromLocation'] as String?;
+    final to = json['toLocation'] as String?;
+    final hasRoute = from != null && from.isNotEmpty && to != null && to.isNotEmpty;
+
+    // Build the status text from available fields
+    final parts = <String>[];
+    if (hasRoute) {
+      parts.add('$from → $to 📍');
+    }
+    if (json['travelDate'] != null && (json['travelDate'] as String).isNotEmpty) {
+      final timeStr = json['travelTime'] ?? '';
+      parts.add('${json['travelDate']}${timeStr.isNotEmpty ? ', $timeStr' : ''} ⏰');
+    }
+    if (json['description'] != null && (json['description'] as String).isNotEmpty) {
+      parts.add(json['description']);
+    }
+    final statusText = parts.isNotEmpty ? parts.join('\n') : 'New post';
+
+    // Build caption
+    final caption = json['description'] ?? '';
+
+    // Build tags from locations
+    final tags = <String>[];
+    if (from != null && from.isNotEmpty) tags.add('#${from.split(',').first.trim().replaceAll(' ', '')}');
+    if (to != null && to.isNotEmpty) tags.add('#${to.split(',').first.trim().replaceAll(' ', '')}');
+    tags.add('#TruckMate');
+
+    // Calculate time ago from createdAt
+    final timeAgo = _calculateTimeAgo(json['createdAt'] as String?);
+
+    return Post(
+      id: (json['id'] ?? 0).toString(),
+      userName: json['userName'] ?? 'Unknown',
+      role: json['userRole'] ?? 'User',
+      avatarUrl: json['userProfilePicture'] ?? '',
+      timeAgo: timeAgo,
+      statusText: statusText,
+      imageUrl: _buildImageUrl(json['postImage'] as String?),
+      likeCount: 0,
+      commentCount: 0,
+      isLiked: false,
+      isBookmarked: false,
+      caption: caption,
+      tags: tags,
+      hasRouteCard: hasRoute,
+      fromLocation: from,
+      toLocation: to,
+      departureTime: json['travelTime'],
+      contactNumber: json['userMobileNumber'],
+    );
+  }
+
+  /// Calculate a human-readable "time ago" string from an ISO datetime
+  static String _calculateTimeAgo(String? dateTimeStr) {
+    if (dateTimeStr == null || dateTimeStr.isEmpty) return 'Just now';
+    try {
+      final dateTime = DateTime.parse(dateTimeStr);
+      final now = DateTime.now();
+      final diff = now.difference(dateTime);
+
+      if (diff.inDays > 365) return '${diff.inDays ~/ 365}y ago';
+      if (diff.inDays > 30) return '${diff.inDays ~/ 30}mo ago';
+      if (diff.inDays > 0) return '${diff.inDays}d ago';
+      if (diff.inHours > 0) return '${diff.inHours}h ago';
+      if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
+      return 'Just now';
+    } catch (_) {
+      return 'Just now';
+    }
+  }
+
+  /// Build full image URL from backend relative path
+  static String _buildImageUrl(String? imagePath) {
+    if (imagePath == null || imagePath.isEmpty) return '';
+    // Already a full URL
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+    // Relative path from backend — prepend base URL
+    return '${ApiConstants.baseUrl}$imagePath';
+  }
 
   Post copyWith({
     String? id,

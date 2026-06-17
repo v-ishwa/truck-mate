@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/post.dart';
-import '../../domain/repositories/posts_repository.dart';
-import '../../data/repositories/mock_posts_repository.dart';
+import '../../data/repositories/api_posts_repository.dart';
 import '../widgets/post_card.dart';
 
 class PostsFeedScreen extends StatefulWidget {
@@ -12,9 +11,10 @@ class PostsFeedScreen extends StatefulWidget {
 }
 
 class PostsFeedScreenState extends State<PostsFeedScreen> {
-  final PostsRepository _repository = MockPostsRepository();
+  final ApiPostsRepository _repository = ApiPostsRepository();
   List<Post> _posts = [];
   bool _isLoading = true;
+  String? _errorMessage;
   String _searchQuery = '';
   final ScrollController _scrollController = ScrollController();
 
@@ -34,9 +34,11 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
     if (!mounted) return;
     setState(() {
       _isLoading = true;
+      _errorMessage = null;
     });
     try {
       final posts = await _repository.getPosts();
+      _repository.updateCache(posts);
       if (mounted) {
         setState(() {
           _posts = posts;
@@ -47,6 +49,7 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _errorMessage = e.toString().replaceFirst('Exception: ', '');
         });
       }
     }
@@ -549,60 +552,105 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                         color: Color(0xFF0095F6),
                       ),
                     )
-                  : RefreshIndicator(
-                      onRefresh: refreshFeed,
-                      color: const Color(0xFF0095F6),
-                      child: filteredPosts.isEmpty
-                          ? ListView(
+                  : _errorMessage != null
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                SizedBox(
-                                  height:
-                                      MediaQuery.of(context).size.height * 0.2,
+                                Icon(
+                                  Icons.cloud_off_rounded,
+                                  size: 64,
+                                  color: isDark
+                                      ? Colors.white30
+                                      : Colors.grey.shade300,
                                 ),
-                                Center(
-                                  child: Column(
-                                    children: [
-                                      Icon(
-                                        Icons.search_off_rounded,
-                                        size: 64,
-                                        color: isDark
-                                            ? Colors.white30
-                                            : Colors.grey.shade300,
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        'No matching posts found',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: isDark
-                                              ? Colors.white70
-                                              : Colors.grey.shade600,
-                                        ),
-                                      ),
-                                    ],
+                                const SizedBox(height: 16),
+                                Text(
+                                  _errorMessage!,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: isDark
+                                        ? Colors.white70
+                                        : Colors.grey.shade600,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                ElevatedButton.icon(
+                                  onPressed: _loadFeed,
+                                  icon: const Icon(Icons.refresh_rounded,
+                                      color: Colors.white),
+                                  label: const Text('Retry',
+                                      style: TextStyle(color: Colors.white)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF0095F6),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
                                   ),
                                 ),
                               ],
-                            )
-                          : ListView.builder(
-                              controller: _scrollController,
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              itemCount: filteredPosts.length,
-                              itemBuilder: (context, index) {
-                                final post = filteredPosts[index];
-                                return PostCard(
-                                  post: post,
-                                  onLikePressed: () => _handleLike(post.id),
-                                  onBookmarkPressed: () =>
-                                      _handleBookmark(post.id),
-                                  onCallPressed: () => _handleCallOwner(post),
-                                  onMoreMenuPressed: () =>
-                                      _handleMoreOptions(post),
-                                );
-                              },
                             ),
-                    ),
+                          ),
+                        )
+                      : RefreshIndicator(
+                          onRefresh: refreshFeed,
+                          color: const Color(0xFF0095F6),
+                          child: filteredPosts.isEmpty
+                              ? ListView(
+                                  children: [
+                                    SizedBox(
+                                      height:
+                                          MediaQuery.of(context).size.height * 0.2,
+                                    ),
+                                    Center(
+                                      child: Column(
+                                        children: [
+                                          Icon(
+                                            Icons.search_off_rounded,
+                                            size: 64,
+                                            color: isDark
+                                                ? Colors.white30
+                                                : Colors.grey.shade300,
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            _searchQuery.isNotEmpty
+                                                ? 'No matching posts found'
+                                                : 'No posts yet. Be the first to post!',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: isDark
+                                                  ? Colors.white70
+                                                  : Colors.grey.shade600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : ListView.builder(
+                                  controller: _scrollController,
+                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  itemCount: filteredPosts.length,
+                                  itemBuilder: (context, index) {
+                                    final post = filteredPosts[index];
+                                    return PostCard(
+                                      post: post,
+                                      onLikePressed: () => _handleLike(post.id),
+                                      onBookmarkPressed: () =>
+                                          _handleBookmark(post.id),
+                                      onCallPressed: () => _handleCallOwner(post),
+                                      onMoreMenuPressed: () =>
+                                          _handleMoreOptions(post),
+                                    );
+                                  },
+                                ),
+                        ),
             ),
           ],
         ),
