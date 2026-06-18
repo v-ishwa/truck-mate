@@ -35,7 +35,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         icon: Icons.search_rounded,
         description: 'Find cargo loads, registered transporters, nearby mechanics, and active drivers.',
       ),
-      const ProfileScreen(),
+      ProfileScreen(
+        onPostDeleted: () {
+          _feedKey.currentState?.refreshFeed();
+        },
+        onNavigateToAddPost: () {
+          setState(() {
+            _selectedIndex = 1;
+          });
+        },
+      ),
     ];
   }
 

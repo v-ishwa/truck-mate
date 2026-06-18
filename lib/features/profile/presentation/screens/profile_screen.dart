@@ -8,9 +8,19 @@ import '../widgets/profile_header.dart';
 import '../widgets/posts_grid.dart';
 import '../widgets/fallback_posts_view.dart';
 import 'package:truck_mate/core/local_storage/datasources/theme_local_datasource.dart';
+import 'package:truck_mate/features/auth/domain/repositories/auth_repository.dart';
+import 'package:truck_mate/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:truck_mate/features/auth/presentation/screens/login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final VoidCallback? onPostDeleted;
+  final VoidCallback? onNavigateToAddPost;
+
+  const ProfileScreen({
+    super.key,
+    this.onPostDeleted,
+    this.onNavigateToAddPost,
+  });
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -18,6 +28,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final ProfileRepository _repository = MockProfileRepository();
+  final AuthRepository _authRepository = AuthRepositoryImpl();
   UserProfile _profile = const UserProfile(
     name: 'Loading...',
     role: '',
@@ -78,83 +89,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() {
           _profile = updatedProfile;
         });
-      }
 
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(
-                _profile.isJoined ? Icons.check_circle_rounded : Icons.info_outline_rounded,
-                color: Colors.white,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(_profile.isJoined
-                    ? 'Welcome! You have joined Ramesh Transport membership.'
-                    : 'You have left Ramesh Transport membership.'),
-              ),
-            ],
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(
+                  _profile.isJoined ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(_profile.isJoined
+                      ? 'Welcome! You have joined Ramesh Transport membership.'
+                      : 'You have left Ramesh Transport membership.'),
+                ),
+              ],
+            ),
+            backgroundColor: _profile.isJoined ? Colors.green.shade600 : const Color(0xFF1C1C1C),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 2),
           ),
-          backgroundColor: _profile.isJoined ? Colors.green.shade600 : const Color(0xFF1C1C1C),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          margin: const EdgeInsets.all(16),
-          duration: const Duration(seconds: 2),
-        ),
-      );
+        );
+      }
     } catch (e) {
       // Handle error
     }
   }
 
-  void _addMockPost() async {
-    try {
-      final newIndex = _allPosts.length;
-      final imageIndex = newIndex % _truckImages.length;
-      final newPost = ProfilePost(
-        id: 'post_custom_${DateTime.now().millisecondsSinceEpoch}',
-        imageUrl: _truckImages[imageIndex],
-        description: 'New shipment dispatched successfully! 🚚 #TruckMate #RameshTransport',
-        uploadTime: DateTime.now(),
-      );
 
-      await _repository.uploadPost(newPost);
-      final posts = await _repository.getUploadedPosts();
-      if (mounted) {
-        setState(() {
-          _allPosts = posts;
-          _showEmptyState = false;
-        });
-      }
-
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: const [
-              Icon(Icons.check_circle_rounded, color: Colors.white),
-              SizedBox(width: 12),
-              Expanded(
-                child: Text('Successfully simulated uploading a new post!'),
-              ),
-            ],
-          ),
-          backgroundColor: const Color(0xFF0095F6),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          margin: const EdgeInsets.all(16),
-        ),
-      );
-    } catch (e) {
-      // Handle error
-    }
-  }
 
   void _showThemeSelectionDialog() {
     final currentMode = MyApp.themeNotifier.value;
@@ -230,11 +198,143 @@ class _ProfileScreenState extends State<ProfileScreen> {
         modeStr = 'light';
         break;
       case ThemeMode.system:
-      default:
         modeStr = 'system';
         break;
     }
     ThemeLocalDatasource().saveThemeMode(modeStr);
+  }
+
+  void _handleLogout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    // Show loading indicator while logging out
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF0095F6)),
+      ),
+    );
+    try {
+      await _authRepository.logout();
+      if (mounted) {
+        Navigator.pop(context); // Remove loading dialog
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Remove loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to logout: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
+  }
+
+  void _deletePost(String postId) async {
+    try {
+      final success = await _repository.deletePost(postId);
+      if (success) {
+        if (mounted) {
+          setState(() {
+            _allPosts.removeWhere((p) => p.id == postId);
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Post deleted successfully'),
+              backgroundColor: Colors.green.shade600,
+            ),
+          );
+          widget.onPostDeleted?.call();
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to delete post'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting post: ${e.toString()}'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showDeleteConfirmationDialog(String postId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF1C1C1C) : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Delete Post',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : const Color(0xFF1C1C1C),
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to delete this post? This action cannot be undone.',
+            style: TextStyle(
+              color: isDark ? Colors.white70 : Colors.grey.shade700,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: isDark ? Colors.white70 : Colors.grey.shade600),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _deletePost(postId);
+              },
+              child: const Text(
+                'Delete',
+                style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showPostDetails(ProfilePost post) {
@@ -251,24 +351,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  CircleAvatar(
-                    backgroundImage: NetworkImage(_profile.avatarUrl),
-                    radius: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
                     children: [
-                      Text(
-                        _profile.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      CircleAvatar(
+                        backgroundImage: NetworkImage(_profile.avatarUrl),
+                        radius: 20,
                       ),
-                      Text(
-                        'Owner',
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _profile.name,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            'Owner',
+                            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          ),
+                        ],
                       ),
                     ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showDeleteConfirmationDialog(post.id);
+                    },
                   ),
                 ],
               ),
@@ -330,8 +442,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               } else if (value == 'reset') {
                 (_repository as MockProfileRepository).resetMockData();
                 _loadProfileData();
-              } else if (value == 'add_mock') {
-                _addMockPost();
+              } else if (value == 'logout') {
+                _handleLogout();
               }
             },
             itemBuilder: (context) => [
@@ -346,16 +458,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(width: 10),
                     Text(_showEmptyState ? 'Show Grid State' : 'Show Empty Fallback'),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'add_mock',
-                child: Row(
-                  children: [
-                    const Icon(Icons.add_photo_alternate_rounded, size: 20, color: Colors.blue),
-                    const SizedBox(width: 10),
-                    const Text('Simulate Post Upload'),
                   ],
                 ),
               ),
@@ -381,6 +483,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Icon(Icons.refresh_rounded, size: 20, color: Colors.grey.shade600),
                     const SizedBox(width: 10),
                     const Text('Reset Simulation'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem(
+                value: 'logout',
+                child: Row(
+                  children: const [
+                    Icon(Icons.logout_rounded, size: 20, color: Colors.redAccent),
+                    SizedBox(width: 10),
+                    Text(
+                      'Logout',
+                      style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+                    ),
                   ],
                 ),
               ),
@@ -420,7 +536,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       SliverFillRemaining(
                         hasScrollBody: false,
                         child: FallbackPostsView(
-                          onUploadPressed: _addMockPost,
+                          onUploadPressed: widget.onNavigateToAddPost ?? () {},
                         ),
                       )
                     else

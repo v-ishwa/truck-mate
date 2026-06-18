@@ -104,4 +104,32 @@ class ApiPostsRepository implements PostsRepository {
       }
     }
   }
+
+  @override
+  Future<bool> deletePost(String postId) async {
+    final token = await _getToken();
+    if (token == null) {
+      throw Exception('Not authenticated. Please login first.');
+    }
+
+    final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.posts}/$postId');
+    final response = await client.delete(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    ).timeout(const Duration(seconds: 15));
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      _postCache.remove(postId);
+      return data['success'] == true;
+    } else if (response.statusCode == 401) {
+      throw Exception('Session expired. Please login again.');
+    } else {
+      final data = json.decode(response.body);
+      throw Exception(data['message'] ?? 'Failed to delete post');
+    }
+  }
 }

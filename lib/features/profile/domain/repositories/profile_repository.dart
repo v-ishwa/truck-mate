@@ -6,4 +6,5 @@ abstract class ProfileRepository {
   Future<List<ProfilePost>> getUploadedPosts();
   Future<UserProfile> toggleJoinMembership();
   Future<void> uploadPost(ProfilePost post);
+  Future<bool> deletePost(String postId);
 }

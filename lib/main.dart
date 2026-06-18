@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'features/auth/presentation/screens/login_screen.dart';
+import 'features/auth/presentation/screens/splash_screen.dart';
 import 'core/local_storage/datasources/theme_local_datasource.dart';
 
 void main() async {
@@ -38,7 +38,8 @@ class MyApp extends StatelessWidget {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
       builder: (context, currentMode, _) {
-        final isDark = currentMode == ThemeMode.dark ||
+        final isDark =
+            currentMode == ThemeMode.dark ||
             (currentMode == ThemeMode.system &&
                 MediaQuery.platformBrightnessOf(context) == Brightness.dark);
         final systemUiOverlayStyle = SystemUiOverlayStyle(
@@ -46,8 +47,9 @@ class MyApp extends StatelessWidget {
           statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
           statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
           systemNavigationBarColor: isDark ? Colors.black : Colors.white,
-          systemNavigationBarIconBrightness:
-              isDark ? Brightness.light : Brightness.dark,
+          systemNavigationBarIconBrightness: isDark
+              ? Brightness.light
+              : Brightness.dark,
         );
 
         return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -85,7 +87,7 @@ class MyApp extends StatelessWidget {
               ),
               useMaterial3: true,
             ),
-            home: const LoginScreen(),
+            home: const SplashScreen(),
           ),
         );
       },

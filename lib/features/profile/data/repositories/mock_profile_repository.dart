@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../core/network/api_constants.dart';
 import '../../domain/entities/user_profile.dart';
 import '../../domain/entities/profile_post.dart';
 import '../../domain/repositories/profile_repository.dart';
@@ -38,27 +42,104 @@ class MockProfileRepository implements ProfileRepository {
     );
 
     _posts.clear();
-    for (int i = 0; i < _truckImages.length; i++) {
-      _posts.add(
-        ProfilePost(
-          id: 'post_$i',
-          imageUrl: _truckImages[i],
-          description: 'Proud to deliver safe & on-time load #$i! 🚚💨 #RameshTransport',
-          uploadTime: DateTime.now().subtract(Duration(days: i * 2)),
-        ),
-      );
-    }
   }
 
   @override
   Future<UserProfile> getUserProfile() async {
     await Future.delayed(const Duration(milliseconds: 200));
+    final prefs = await SharedPreferences.getInstance();
+    
+    final name = prefs.getString('user_name') ?? _profile.name;
+    final role = prefs.getString('user_role') ?? _profile.role;
+    final city = prefs.getString('user_city');
+    final mobile = prefs.getString('user_mobile');
+    
+    String avatarUrl = _profile.avatarUrl;
+    final savedProfilePic = prefs.getString('user_profile_picture');
+    if (savedProfilePic != null && savedProfilePic.isNotEmpty) {
+      if (savedProfilePic.startsWith('http')) {
+        avatarUrl = savedProfilePic;
+      } else {
+        avatarUrl = '${ApiConstants.baseUrl}$savedProfilePic';
+      }
+    }
+    
+    final bioLines = [
+      if (city != null && city.isNotEmpty) 'Location: $city',
+      if (mobile != null && mobile.isNotEmpty) 'Contact: $mobile',
+      'Safe & On-time Delivery 🚚',
+      'Pan India Services',
+    ];
+    
+    _profile = _profile.copyWith(
+      name: name,
+      role: role,
+      avatarUrl: avatarUrl,
+      bioLines: bioLines,
+    );
+    
     return _profile;
   }
 
   @override
   Future<List<ProfilePost>> getUploadedPosts() async {
-    await Future.delayed(const Duration(milliseconds: 200));
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      final userMobile = prefs.getString('user_mobile');
+
+      if (token != null && userMobile != null) {
+        final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.posts}');
+        final response = await http.get(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        ).timeout(const Duration(seconds: 15));
+
+        if (response.statusCode == 200) {
+          final List<dynamic> jsonList = json.decode(response.body);
+          
+          final List<ProfilePost> fetchedPosts = [];
+          for (var jsonItem in jsonList) {
+            final postMobile = jsonItem['userMobileNumber'] as String?;
+            if (postMobile == userMobile) {
+              
+              String imageUrl = jsonItem['postImage'] as String? ?? '';
+              if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
+                imageUrl = '${ApiConstants.baseUrl}$imageUrl';
+              }
+              if (imageUrl.isEmpty) {
+                // Fallback to placeholder if no image
+                imageUrl = 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?q=80&w=400&auto=format&fit=crop';
+              }
+              
+              String description = jsonItem['description'] as String? ?? 'No description';
+              
+              DateTime uploadTime = DateTime.now();
+              if (jsonItem['createdAt'] != null) {
+                uploadTime = DateTime.parse(jsonItem['createdAt']);
+              }
+              
+              fetchedPosts.add(ProfilePost(
+                id: jsonItem['id'].toString(),
+                imageUrl: imageUrl,
+                description: description,
+                uploadTime: uploadTime,
+              ));
+            }
+          }
+          
+          _posts.clear();
+          _posts.addAll(fetchedPosts);
+          return _posts;
+        }
+      }
+    } catch (e) {
+      // Fallback to mock data if API fails or no token
+    }
+    
     return List.unmodifiable(_posts);
   }
 
@@ -77,5 +158,35 @@ class MockProfileRepository implements ProfileRepository {
 
   void resetMockData() {
     _initMockData();
+  }
+
+  @override
+  Future<bool> deletePost(String postId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      if (token == null) return false;
+
+      final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.posts}/$postId');
+      final response = await http.delete(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          _posts.removeWhere((p) => p.id == postId);
+          return true;
+        }
+      }
+    } catch (e) {
+      // Rethrow for the caller to handle
+      rethrow;
+    }
+    return false;
   }
 }

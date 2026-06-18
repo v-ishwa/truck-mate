@@ -237,83 +237,11 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
           ),
           
           // 4. Action Row (Likes, Comments, Shares, Bookmark)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    _buildIconActionButton(
-                      icon: post.isLiked ? Icons.favorite : Icons.favorite_border,
-                      color: post.isLiked ? Colors.red : textColor,
-                      label: '${post.likeCount}',
-                      onPressed: widget.onLikePressed,
-                    ),
-                    const SizedBox(width: 8),
-                    _buildIconActionButton(
-                      icon: Icons.chat_bubble_outline,
-                      color: textColor,
-                      label: '${post.commentCount}',
-                      onPressed: () {},
-                    ),
-                    const SizedBox(width: 12),
-                    IconButton(
-                      icon: Icon(Icons.send_outlined, color: textColor, size: 24),
-                      onPressed: () {},
-                    ),
-                  ],
-                ),
-                
-                IconButton(
-                  icon: Icon(
-                    post.isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                    color: post.isBookmarked ? (isDark ? Colors.amber : const Color(0xFF0095F6)) : textColor,
-                    size: 24,
-                  ),
-                  onPressed: widget.onBookmarkPressed,
-                ),
-              ],
-            ),
-          ),
+// Action row (likes, comments, share, bookmark) removed
+SizedBox.shrink(),
           
-          // 5. Caption & Tags
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RichText(
-                  text: TextSpan(
-                    style: TextStyle(fontSize: 14, color: textColor),
-                    children: [
-                      TextSpan(
-                        text: '${post.userName} ',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      TextSpan(text: post.caption),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 6),
-                
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: post.tags.map((tag) {
-                    return Text(
-                      tag,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF0095F6),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
+// Caption and tags removed
+SizedBox.shrink(),
           
           // 6. Route Info Card
           if (post.hasRouteCard &&
@@ -336,34 +264,5 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
     );
   }
 
-  Widget _buildIconActionButton({
-    required IconData icon,
-    required Color color,
-    required String label,
-    required VoidCallback onPressed,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(20),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white70 : const Color(0xFF4A4A4A),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 }

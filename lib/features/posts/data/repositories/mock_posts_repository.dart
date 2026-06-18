@@ -107,4 +107,15 @@ class MockPostsRepository implements PostsRepository {
     await Future.delayed(const Duration(milliseconds: 500));
     _posts.insert(0, post);
   }
+
+  @override
+  Future<bool> deletePost(String postId) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    final index = _posts.indexWhere((p) => p.id == postId);
+    if (index != -1) {
+      _posts.removeAt(index);
+      return true;
+    }
+    return false;
+  }
 }

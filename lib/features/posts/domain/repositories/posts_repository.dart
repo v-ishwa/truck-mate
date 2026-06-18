@@ -5,4 +5,5 @@ abstract class PostsRepository {
   Future<Post> toggleLike(String postId);
   Future<Post> toggleBookmark(String postId);
   Future<void> addPost(Post post);
+  Future<bool> deletePost(String postId);
 }
