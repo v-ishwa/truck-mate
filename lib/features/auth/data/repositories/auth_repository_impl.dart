@@ -46,18 +46,21 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.register}');
       // Date format required: YYYY-MM-DD
-      final dobStr = "${dob.year}-${dob.month.toString().padLeft(2, '0')}-${dob.day.toString().padLeft(2, '0')}";
+      final dobStr =
+          "${dob.year}-${dob.month.toString().padLeft(2, '0')}-${dob.day.toString().padLeft(2, '0')}";
 
-      final response = await client.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'name': name,
-          'mobileNumber': mobileNumber,
-          'dob': dobStr,
-          'role': role,
-        }),
-      ).timeout(const Duration(seconds: 10));
+      final response = await client
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({
+              'name': name,
+              'mobileNumber': mobileNumber,
+              'dob': dobStr,
+              'role': role,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -74,13 +77,12 @@ class AuthRepositoryImpl implements AuthRepository {
       }
     } catch (e) {
       String errorMsg = 'Connection failed: $e';
-      if (e.toString().contains('TimeoutException') || e.toString().contains('timeout')) {
-        errorMsg = 'Connection timed out. Please check if the server is running and try again.';
+      if (e.toString().contains('TimeoutException') ||
+          e.toString().contains('timeout')) {
+        errorMsg =
+            'Connection timed out. Please check if the server is running and try again.';
       }
-      return AuthResponse(
-        success: false,
-        message: errorMsg,
-      );
+      return AuthResponse(success: false, message: errorMsg);
     }
   }
 
@@ -88,13 +90,13 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<AuthResponse> loginWithPhoneNumber(String phoneNumber) async {
     try {
       final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.login}');
-      final response = await client.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'userMobile': phoneNumber,
-        }),
-      ).timeout(const Duration(seconds: 10));
+      final response = await client
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({'userMobile': phoneNumber}),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -111,19 +113,40 @@ class AuthRepositoryImpl implements AuthRepository {
       }
     } catch (e) {
       String errorMsg = 'Connection failed: $e';
-      if (e.toString().contains('TimeoutException') || e.toString().contains('timeout')) {
-        errorMsg = 'Connection timed out. Please check if the server is running and try again.';
+      if (e.toString().contains('TimeoutException') ||
+          e.toString().contains('timeout')) {
+        errorMsg =
+            'Connection timed out. Please check if the server is running and try again.';
       }
-      return AuthResponse(
-        success: false,
-        message: errorMsg,
-      );
+      return AuthResponse(success: false, message: errorMsg);
     }
   }
 
   @override
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+
+    // Call logout endpoint to invalidate token on backend
+    if (token != null && token.isNotEmpty) {
+      try {
+        final url = Uri.parse('${ApiConstants.baseUrl}/api/auth/logout');
+        await client
+            .post(
+              url,
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer $token',
+              },
+            )
+            .timeout(const Duration(seconds: 10));
+      } catch (e) {
+        // Even if backend call fails, proceed with local logout
+        print('Failed to call logout endpoint: $e');
+      }
+    }
+
+    // Clear all local data
     await prefs.remove('auth_token');
     await prefs.remove('user_id');
     await prefs.remove('user_name');
