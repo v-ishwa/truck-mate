@@ -77,7 +77,7 @@ class Post {
       id: (json['id'] ?? 0).toString(),
       userName: json['userName'] ?? 'Unknown',
       role: json['userRole'] ?? 'User',
-      avatarUrl: json['userProfilePicture'] ?? '',
+      avatarUrl: _buildImageUrl(json['userProfilePicture'] as String?),
       timeAgo: timeAgo,
       statusText: statusText,
       imageUrl: _buildImageUrl(json['postImage'] as String?),

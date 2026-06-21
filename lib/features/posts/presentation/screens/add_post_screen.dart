@@ -78,9 +78,9 @@ class _AddPostScreenState extends State<AddPostScreen> {
   Future<void> _pickImageFromGallery() async {
     final XFile? image = await _picker.pickImage(
       source: ImageSource.gallery,
-      maxWidth: 1920,
+      maxWidth: 1080,
       maxHeight: 1080,
-      imageQuality: 85,
+      imageQuality: 50,
     );
     if (image != null) {
       setState(() {
@@ -92,9 +92,9 @@ class _AddPostScreenState extends State<AddPostScreen> {
   Future<void> _pickImageFromCamera() async {
     final XFile? image = await _picker.pickImage(
       source: ImageSource.camera,
-      maxWidth: 1920,
+      maxWidth: 1080,
       maxHeight: 1080,
-      imageQuality: 85,
+      imageQuality: 50,
     );
     if (image != null) {
       setState(() {

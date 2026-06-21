@@ -24,4 +24,5 @@ class ApiConstants {
   static const String posts = '/api/posts';
   static const String createPost = '/api/posts/create';
   static const String uploadPostImage = '/api/upload/post-image';
+  static const String uploadProfileImage = '/api/upload/profile-image';
 }

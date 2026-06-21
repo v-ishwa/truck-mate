@@ -32,7 +32,7 @@ class MockProfileRepository implements ProfileRepository {
     _profile = const UserProfile(
       name: 'Ramesh Transport',
       role: 'Owner',
-      avatarUrl: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?q=80&w=200&auto=format&fit=crop',
+      avatarUrl: '',
       bioLines: [
         'Safe & On-time Delivery 🚚',
         'Pan India Services',
@@ -54,7 +54,7 @@ class MockProfileRepository implements ProfileRepository {
     final city = prefs.getString('user_city');
     final mobile = prefs.getString('user_mobile');
     
-    String avatarUrl = _profile.avatarUrl;
+    String avatarUrl = '';
     final savedProfilePic = prefs.getString('user_profile_picture');
     if (savedProfilePic != null && savedProfilePic.isNotEmpty) {
       if (savedProfilePic.startsWith('http')) {

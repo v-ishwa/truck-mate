@@ -1,3 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:truck_mate/core/network/api_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:truck_mate/main.dart';
 import '../../domain/entities/profile_post.dart';
@@ -39,6 +45,176 @@ class _ProfileScreenState extends State<ProfileScreen> {
   List<ProfilePost> _allPosts = [];
   bool _showEmptyState = false;
   bool _isLoading = true;
+  bool _isProfilePicLoading = false;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickAndUploadProfileImage(ImageSource source) async {
+    Navigator.pop(context); // close bottom sheet
+    final XFile? image = await _picker.pickImage(
+      source: source,
+      maxWidth: 1080,
+      maxHeight: 1080,
+      imageQuality: 50,
+    );
+    if (image == null) return;
+
+    setState(() {
+      _isProfilePicLoading = true;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      final userId = prefs.getInt('user_id');
+      if (token == null || userId == null) {
+        throw Exception('User not logged in properly.');
+      }
+
+      final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.uploadProfileImage}');
+      final request = http.MultipartRequest('POST', url);
+      request.headers['Authorization'] = 'Bearer $token';
+      request.fields['userId'] = userId.toString();
+      request.files.add(await http.MultipartFile.fromPath('file', image.path));
+
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          final newImageUrl = data['imageUrl'] as String?;
+          if (newImageUrl != null && newImageUrl.isNotEmpty) {
+            await prefs.setString('user_profile_picture', newImageUrl);
+          }
+          await _loadProfileData(false);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: const Text('Profile image updated successfully!'), backgroundColor: Colors.green.shade600),
+            );
+          }
+        }
+      } else {
+        throw Exception('Failed to upload image.');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProfilePicLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _deleteProfileImage() async {
+    Navigator.pop(context); // close bottom sheet
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove Photo'),
+        content: const Text('Are you sure you want to remove your profile photo?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Remove', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    setState(() {
+      _isProfilePicLoading = true;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      final userId = prefs.getInt('user_id');
+      if (token == null || userId == null) {
+        throw Exception('User not logged in properly.');
+      }
+
+      final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.uploadProfileImage}/$userId');
+      final response = await http.delete(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          await prefs.remove('user_profile_picture');
+          await _loadProfileData(false);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: const Text('Profile photo removed'), backgroundColor: Colors.green.shade600),
+            );
+          }
+        }
+      } else {
+        throw Exception('Failed to remove image.');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProfilePicLoading = false;
+        });
+      }
+    }
+  }
+
+  void _showImageSourceSheet() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1C1C1C) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 40, height: 4, decoration: BoxDecoration(color: isDark ? Colors.white24 : Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 20),
+              Text('Update Profile Picture', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF1C1C1C))),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: const Icon(Icons.photo_library_rounded, color: Color(0xFF0095F6)),
+                title: Text('Gallery', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1C1C1C))),
+                onTap: () => _pickAndUploadProfileImage(ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_rounded, color: Colors.green),
+                title: Text('Camera', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1C1C1C))),
+                onTap: () => _pickAndUploadProfileImage(ImageSource.camera),
+              ),
+              if (_profile.avatarUrl.isNotEmpty)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
+                  title: const Text('Remove Photo', style: TextStyle(color: Colors.redAccent)),
+                  onTap: _deleteProfileImage,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   // Curated list of premium truck photo URLs from Unsplash
   final List<String> _truckImages = [
@@ -59,10 +235,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadProfileData();
   }
 
-  Future<void> _loadProfileData() async {
-    setState(() {
-      _isLoading = true;
-    });
+  Future<void> _loadProfileData([bool showLoading = true]) async {
+    if (showLoading) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
     try {
       final profile = await _repository.getUserProfile();
       final posts = await _repository.getUploadedPosts();
@@ -70,13 +248,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() {
           _profile = profile;
           _allPosts = posts;
-          _isLoading = false;
+          if (showLoading) {
+            _isLoading = false;
+          }
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          if (showLoading) {
+            _isLoading = false;
+          }
         });
       }
     }
@@ -344,6 +526,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return Container(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -355,9 +538,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   Row(
                     children: [
-                      CircleAvatar(
-                        backgroundImage: NetworkImage(_profile.avatarUrl),
-                        radius: 20,
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(shape: BoxShape.circle, color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF0F0F0)),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: _profile.avatarUrl.isNotEmpty
+                              ? Image.network(_profile.avatarUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => CircleAvatar(radius: 20, child: Icon(Icons.person, size: 24, color: isDark ? Colors.white70 : Colors.grey)))
+                              : CircleAvatar(radius: 20, child: Icon(Icons.person, size: 24, color: isDark ? Colors.white70 : Colors.grey)),
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Column(
@@ -433,34 +623,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           PopupMenuButton<String>(
             icon: Icon(Icons.more_vert, color: isDark ? Colors.white : const Color(0xFF1C1C1C)),
             onSelected: (value) {
-              if (value == 'toggle_state') {
-                setState(() {
-                  _showEmptyState = !_showEmptyState;
-                });
-              } else if (value == 'change_theme') {
+              if (value == 'change_theme') {
                 _showThemeSelectionDialog();
-              } else if (value == 'reset') {
-                (_repository as MockProfileRepository).resetMockData();
-                _loadProfileData();
               } else if (value == 'logout') {
                 _handleLogout();
               }
             },
             itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'toggle_state',
-                child: Row(
-                  children: [
-                    Icon(
-                      _showEmptyState ? Icons.grid_on_rounded : Icons.grid_off_rounded,
-                      size: 20,
-                      color: const Color(0xFF0095F6),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(_showEmptyState ? 'Show Grid State' : 'Show Empty Fallback'),
-                  ],
-                ),
-              ),
               PopupMenuItem(
                 value: 'change_theme',
                 child: Row(
@@ -472,17 +641,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     SizedBox(width: 10),
                     Text('Change Theme'),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              PopupMenuItem(
-                value: 'reset',
-                child: Row(
-                  children: [
-                    Icon(Icons.refresh_rounded, size: 20, color: Colors.grey.shade600),
-                    const SizedBox(width: 10),
-                    const Text('Reset Simulation'),
                   ],
                 ),
               ),
@@ -528,6 +686,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: ProfileHeader(
                         profile: _profile,
                         onJoinToggled: _toggleJoin,
+                        onAvatarTapped: _showImageSourceSheet,
+                        isLoading: _isProfilePicLoading,
                       ),
                     ),
 

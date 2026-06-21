@@ -8,7 +8,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
 
-  final themeDatasource = ThemeLocalDatasource();
+  final themeDatasource = ThemeLocalDatasource();  
   await themeDatasource.init();
   final savedThemeMode = await themeDatasource.getThemeMode();
 

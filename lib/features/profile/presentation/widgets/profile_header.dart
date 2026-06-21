@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/user_profile.dart';
+import 'package:truck_mate/core/network/api_constants.dart';
 
 class ProfileHeader extends StatefulWidget {
   final UserProfile profile;
   final VoidCallback onJoinToggled;
+  final VoidCallback? onAvatarTapped;
+  final bool isLoading;
 
   const ProfileHeader({
     super.key,
     required this.profile,
     required this.onJoinToggled,
+    this.onAvatarTapped,
+    this.isLoading = false,
   });
 
   @override
@@ -55,13 +60,12 @@ class _ProfileHeaderState extends State<ProfileHeader> with SingleTickerProvider
     final isJoined = widget.profile.isJoined;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final defaultAvatar = Container(
-      color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF0F0F0),
-      alignment: Alignment.center,
+    final defaultAvatar = CircleAvatar(
+      radius: 45,
       child: Icon(
-        Icons.person_rounded,
-        color: isDark ? Colors.grey.shade600 : Colors.grey.shade400,
-        size: 44,
+        Icons.person,
+        size: 50,
+        color: isDark ? Colors.white70 : Colors.grey,
       ),
     );
 
@@ -75,32 +79,61 @@ class _ProfileHeaderState extends State<ProfileHeader> with SingleTickerProvider
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Circular Avatar with shadow & border
-              Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.08),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
+              GestureDetector(
+                onTap: widget.onAvatarTapped,
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 90,
+                      height: 90,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.08),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF262626) : const Color(0xFFF2F2F2),
+                          width: 2,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(45),
+                        child: widget.isLoading
+                            ? const Center(child: CircularProgressIndicator(color: Color(0xFF0095F6)))
+                            : widget.profile.avatarUrl.isNotEmpty
+                                ? Image.network(
+                                    widget.profile.avatarUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => defaultAvatar,
+                                  )
+                                : defaultAvatar,
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0095F6),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF1C1C1C) : Colors.white,
+                            width: 2,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
                     ),
                   ],
-                  border: Border.all(
-                    color: isDark ? const Color(0xFF262626) : const Color(0xFFF2F2F2),
-                    width: 2,
-                  ),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(45),
-                  child: widget.profile.avatarUrl.isNotEmpty
-                      ? Image.network(
-                          widget.profile.avatarUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => defaultAvatar,
-                        )
-                      : defaultAvatar,
                 ),
               ),
               const SizedBox(width: 32),
