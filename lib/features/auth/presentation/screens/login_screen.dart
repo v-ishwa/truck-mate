@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:truck_mate/features/main_navigation_screen.dart';
+import 'package:truck_mate/core/theme/app_theme.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../widgets/custom_button.dart';
@@ -91,9 +92,9 @@ class _LoginScreenState extends State<LoginScreen> {
           backgroundColor: Colors.green.shade600,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(AppDimensions.borderRadiusMedium),
           ),
-          margin: const EdgeInsets.all(16),
+          margin: const EdgeInsets.all(AppDimensions.paddingMedium),
         ),
       );
 
@@ -119,9 +120,9 @@ class _LoginScreenState extends State<LoginScreen> {
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(AppDimensions.borderRadiusMedium),
           ),
-          margin: const EdgeInsets.all(16),
+          margin: const EdgeInsets.all(AppDimensions.paddingMedium),
         ),
       );
     }
@@ -143,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   MediaQuery.of(context).padding.top -
                   MediaQuery.of(context).padding.bottom,
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingLarge, vertical: 32),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -174,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       padding: const EdgeInsets.all(16),
                       child: Container(
                         decoration: const BoxDecoration(
-                          color: Color(0xFF0095F6),
+                          color: AppTheme.primaryColor,
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -188,19 +189,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     // App Title
                     RichText(
                       text: TextSpan(
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
+                        style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                           letterSpacing: -0.5,
-                          color: isDark
-                              ? Colors.white
-                              : const Color(0xFF1C1C1C),
                         ),
                         children: const [
                           TextSpan(text: 'Truck'),
                           TextSpan(
                             text: 'Mate',
-                            style: TextStyle(color: Color(0xFF0095F6)),
+                            style: TextStyle(color: AppTheme.primaryColor),
                           ),
                         ],
                       ),
@@ -209,22 +205,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Subtitle
                     Text(
                       'Safe & On-time Delivery 🚚',
-                      style: TextStyle(
-                        fontSize: 15,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w500,
-                        color: isDark
-                            ? Colors.grey.shade400
-                            : Colors.grey.shade600,
+                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                       ),
                     ),
                     Text(
                       'Pan India Services',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w400,
-                        color: isDark
-                            ? Colors.grey.shade500
-                            : Colors.grey.shade500,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: isDark ? Colors.grey.shade500 : Colors.grey.shade500,
                         height: 1.4,
                       ),
                     ),
@@ -239,23 +228,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       Text(
                         'Get Started',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: isDark
-                              ? Colors.white
-                              : const Color(0xFF1C1C1C),
-                        ),
+                        style: Theme.of(context).textTheme.headlineMedium,
                       ),
                       const SizedBox(height: 6),
                       Text(
                         'Enter your mobile number to receive a one-time verification code.',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDark
-                              ? Colors.grey.shade400
-                              : Colors.grey.shade600,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           height: 1.4,
+                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -281,11 +261,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         Text(
                           "Don't have an account? ",
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: isDark
-                                ? Colors.grey.shade400
-                                : Colors.grey.shade600,
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                           ),
                         ),
                         GestureDetector(
@@ -301,7 +278,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             'Sign Up',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Color(0xFF0095F6),
+                              color: AppTheme.primaryColor,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -311,11 +288,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 24),
                     Text(
                       'By continuing, you agree to our',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark
-                            ? Colors.grey.shade500
-                            : const Color(0xFF8E8E8E),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: isDark ? Colors.grey.shade500 : const Color(0xFF8E8E8E),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -333,18 +307,15 @@ class _LoginScreenState extends State<LoginScreen> {
                             'Terms of Service',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF0095F6),
+                              color: AppTheme.primaryColor,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                         Text(
                           '  &  ',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark
-                                ? Colors.grey.shade500
-                                : const Color(0xFF8E8E8E),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: isDark ? Colors.grey.shade500 : const Color(0xFF8E8E8E),
                           ),
                         ),
                         TextButton(
@@ -358,7 +329,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             'Privacy Policy',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF0095F6),
+                              color: AppTheme.primaryColor,
                               fontWeight: FontWeight.w600,
                             ),
                           ),

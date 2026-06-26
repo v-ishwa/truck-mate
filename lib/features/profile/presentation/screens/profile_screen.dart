@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:truck_mate/core/network/api_constants.dart';
+import 'package:truck_mate/core/constants/app_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:truck_mate/main.dart';
 import '../../domain/entities/profile_post.dart';
@@ -29,10 +30,13 @@ class ProfileScreen extends StatefulWidget {
   });
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  State<ProfileScreen> createState() => ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class ProfileScreenState extends State<ProfileScreen> {
+  void showEditLocationSheet() {
+    _showEditLocationSheet();
+  }
   final ProfileRepository _repository = MockProfileRepository();
   final AuthRepository _authRepository = AuthRepositoryImpl();
   UserProfile _profile = const UserProfile(
@@ -304,6 +308,163 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void _showEditLocationSheet() {
+    String? tempState = _profile.state;
+    String? tempCity = _profile.city;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1C1C1C) : Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final textColor = isDark ? Colors.white : const Color(0xFF1C1C1C);
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20, right: 20, top: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Edit Location', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  const Text('State', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: tempState,
+                    isExpanded: true,
+                    menuMaxHeight: 300,
+                    dropdownColor: isDark ? const Color(0xFF262626) : Colors.white,
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    items: (AppConstants.stateCityMap.keys.toList()..sort()).map((state) {
+                      return DropdownMenuItem(value: state, child: Text(state, style: TextStyle(color: textColor)));
+                    }).toList(),
+                    onChanged: (val) {
+                      setModalState(() {
+                        tempState = val;
+                        tempCity = null; // reset city when state changes
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  const Text('City', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: tempCity,
+                    isExpanded: true,
+                    menuMaxHeight: 300,
+                    dropdownColor: isDark ? const Color(0xFF262626) : Colors.white,
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      hintText: tempState == null ? 'Select State first' : 'Select City',
+                    ),
+                    items: ((tempState != null ? AppConstants.stateCityMap[tempState]! : <String>[]).toList()..sort()).map((city) {
+                      return DropdownMenuItem(value: city, child: Text(city, style: TextStyle(color: textColor)));
+                    }).toList(),
+                    onChanged: tempState == null ? null : (val) {
+                      setModalState(() {
+                        tempCity = val;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 30),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        if (tempState != null && tempCity != null) {
+                          Navigator.pop(context);
+                          await _saveLocation(tempState!, tempCity!);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0095F6),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Save Location', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _saveLocation(String state, String city) async {
+    setState(() => _isLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      
+      if (token != null) {
+        final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.updateProfile}');
+        final response = await http.put(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: json.encode({
+            'state': state,
+            'city': city,
+          }),
+        ).timeout(const Duration(seconds: 15));
+        
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          if (data['success'] == true) {
+            await prefs.setString('user_state', state);
+            await prefs.setString('user_city', city);
+            await _loadProfileData(false);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Location updated successfully'), backgroundColor: Colors.green),
+              );
+            }
+            return;
+          }
+        }
+      }
+      
+      // Fallback for mock if API fails
+      await prefs.setString('user_state', state);
+      await prefs.setString('user_city', city);
+      await _loadProfileData(false);
+      
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating location: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
 
 
   void _showThemeSelectionDialog() {
@@ -437,8 +598,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _deletePost(String postId) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF0095F6)),
+      ),
+    );
     try {
       final success = await _repository.deletePost(postId);
+      if (mounted) {
+        Navigator.pop(context); // Remove loading dialog
+      }
       if (success) {
         if (mounted) {
           setState(() {
@@ -464,6 +635,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
+        Navigator.pop(context); // Remove loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error deleting post: ${e.toString()}'),
@@ -544,9 +716,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         decoration: BoxDecoration(shape: BoxShape.circle, color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF0F0F0)),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(20),
-                          child: _profile.avatarUrl.isNotEmpty
-                              ? Image.network(_profile.avatarUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => CircleAvatar(radius: 20, child: Icon(Icons.person, size: 24, color: isDark ? Colors.white70 : Colors.grey)))
-                              : CircleAvatar(radius: 20, child: Icon(Icons.person, size: 24, color: isDark ? Colors.white70 : Colors.grey)),
+                           child: _profile.avatarUrl.isNotEmpty
+                              ? Image.network(_profile.avatarUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const CircleAvatar(radius: 20, backgroundColor: Color(0xFF0D47A1), child: Icon(Icons.person, size: 24, color: Colors.white)))
+                              : const CircleAvatar(radius: 20, backgroundColor: Color(0xFF0D47A1), child: Icon(Icons.person, size: 24, color: Colors.white)),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -605,19 +777,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? Colors.black : Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(
-          _profile.name,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white : const Color(0xFF1C1C1C),
-            fontSize: 18,
-          ),
-        ),
-        backgroundColor: isDark ? Colors.black : Colors.white,
-        elevation: 0,
-        centerTitle: false,
+        title: Text(_profile.name),
         actions: [
           // Developer simulation menu (the 3-dots in reference UI)
           PopupMenuButton<String>(
@@ -687,6 +849,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         profile: _profile,
                         onJoinToggled: _toggleJoin,
                         onAvatarTapped: _showImageSourceSheet,
+                        onEditLocation: _showEditLocationSheet,
                         isLoading: _isProfilePicLoading,
                       ),
                     ),

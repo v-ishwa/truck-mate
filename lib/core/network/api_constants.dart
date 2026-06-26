@@ -8,7 +8,7 @@ class ApiConstants {
   // Find it by running 'ipconfig' (Windows) or 'ifconfig' (Mac/Linux).
   // Both your phone and PC must be on the same WiFi network.
   // ============================================================
-  static final String _serverHost = dotenv.env['SERVER_HOST'] ?? '192.168.29.136';
+  static final String _serverHost = dotenv.env['SERVER_HOST'] ?? '127.0.0.1';
   static final int _serverPort = int.tryParse(dotenv.env['SERVER_PORT'] ?? '8080') ?? 8080;
 
   static String get baseUrl {
@@ -25,4 +25,6 @@ class ApiConstants {
   static const String createPost = '/api/posts/create';
   static const String uploadPostImage = '/api/upload/post-image';
   static const String uploadProfileImage = '/api/upload/profile-image';
+  static const String searchUsers = '/api/users/search';
+  static const String updateProfile = '/api/users/profile';
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:truck_mate/core/constants/app_constants.dart';
 import '../../../../core/network/api_constants.dart';
 
 class AddPostScreen extends StatefulWidget {
@@ -19,8 +20,6 @@ class _AddPostScreenState extends State<AddPostScreen> {
   @override
   void initState() {
     super.initState();
-    // Ensure city options are sorted ascending
-    _cityOptions.sort();
   }
 
   final TextEditingController _captionController = TextEditingController();
@@ -33,35 +32,9 @@ class _AddPostScreenState extends State<AddPostScreen> {
   bool _isLoading = false;
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
-  final List<String> _cityOptions = [
-    'Chennai',
-    'Coimbatore',
-    'Madurai',
-    'Tiruchirappalli',
-    'Salem',
-    'Tirunelveli',
-    'Erode',
-    'Vellore',
-    'Thanjavur',
-    'Dindigul',
-    'Nagercoil',
-    'Karur',
-    'Cuddalore',
-    'Kanchipuram',
-    'Tirupur',
-    'Hosur',
-    'Namakkal',
-    'Ariyalur',
-    'Perambalur',
-    'Kumbakonam',
-    'Nagapattinam',
-    'Pudukkottai',
-    'Ramanathapuram',
-    'Sivaganga',
-    'Villupuram',
-    'Thoothukudi',
-    'Krishnagiri',
-  ];
+
+  String? _selectedDepartureState;
+  String? _selectedDestinationState;
   String? _selectedFromCity;
   String? _selectedToCity;
 
@@ -331,6 +304,10 @@ class _AddPostScreenState extends State<AddPostScreen> {
           setState(() {
             _selectedImage = null;
             _isRoutePost = false;
+            _selectedDepartureState = null;
+            _selectedDestinationState = null;
+            _selectedFromCity = null;
+            _selectedToCity = null;
           });
 
           // Callback to navigate to Feed page & trigger refresh
@@ -380,19 +357,9 @@ class _AddPostScreenState extends State<AddPostScreen> {
     final borderColor = isDark ? const Color(0xFF262626) : Colors.grey.shade200;
 
     return Scaffold(
-      backgroundColor: isDark ? Colors.black : Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: isDark ? Colors.black : Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        title: Text(
-          'Create Post',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: textColor,
-            fontSize: 18,
-          ),
-        ),
+        title: const Text('Create Post'),
       ),
       body: SafeArea(
         child: _isLoading
@@ -658,9 +625,24 @@ class _AddPostScreenState extends State<AddPostScreen> {
                                         ),
                                         const SizedBox(height: 12),
                                         _buildDropdownField(
+                                          label: 'Departure State',
+                                          value: _selectedDepartureState,
+                                          items: AppConstants.stateCityMap.keys.toList()..sort(),
+                                          onChanged: (val) {
+                                            setState(() {
+                                              _selectedDepartureState = val;
+                                              _selectedFromCity = null;
+                                              _fromController.clear();
+                                            });
+                                          },
+                                        ),
+                                        const SizedBox(height: 12),
+                                        _buildDropdownField(
                                           label: 'Departure City',
                                           value: _selectedFromCity,
-                                          items: _cityOptions,
+                                          items: _selectedDepartureState != null
+                                              ? (List<String>.from(AppConstants.stateCityMap[_selectedDepartureState]!)..sort())
+                                              : [],
                                           onChanged: (val) {
                                             setState(() {
                                               _selectedFromCity = val;
@@ -670,9 +652,24 @@ class _AddPostScreenState extends State<AddPostScreen> {
                                         ),
                                         const SizedBox(height: 12),
                                         _buildDropdownField(
+                                          label: 'Destination State',
+                                          value: _selectedDestinationState,
+                                          items: AppConstants.stateCityMap.keys.toList()..sort(),
+                                          onChanged: (val) {
+                                            setState(() {
+                                              _selectedDestinationState = val;
+                                              _selectedToCity = null;
+                                              _toController.clear();
+                                            });
+                                          },
+                                        ),
+                                        const SizedBox(height: 12),
+                                        _buildDropdownField(
                                           label: 'Destination City',
                                           value: _selectedToCity,
-                                          items: _cityOptions,
+                                          items: _selectedDestinationState != null
+                                              ? (List<String>.from(AppConstants.stateCityMap[_selectedDestinationState]!)..sort())
+                                              : [],
                                           onChanged: (val) {
                                             setState(() {
                                               _selectedToCity = val;
@@ -836,7 +833,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final inputBgColor = isDark ? const Color(0xFF161616) : Colors.grey.shade50;
     final borderColor = isDark ? const Color(0xFF262626) : Colors.grey.shade200;
-    // Fixed width to avoid fullscreen dropdown overlay
+    final textColor = isDark ? Colors.white : const Color(0xFF1C1C1C);
     return SizedBox(
       width: double.infinity,
       child: Container(
@@ -846,20 +843,17 @@ class _AddPostScreenState extends State<AddPostScreen> {
           border: Border.all(color: borderColor, width: 1),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        constraints: BoxConstraints(minHeight: 48),
-        child: DropdownButtonFormField<String>(
-          isExpanded: false,
-          // No initial value => shows hint "Select ..."
-          initialValue: null,
+        constraints: const BoxConstraints(minHeight: 48),
+        child: DropdownButton<String>(
+          isExpanded: true,
+          value: value,
           menuMaxHeight: 250,
-          decoration: InputDecoration(
-            hintText: label, // acts as placeholder, no persistent label
-            hintStyle: TextStyle(color: Colors.grey.shade600),
-            border: InputBorder.none,
-            isDense: true,
-          ),
+          underline: const SizedBox.shrink(),
+          hint: Text(label, style: TextStyle(color: Colors.grey.shade600)),
+          dropdownColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          style: TextStyle(color: textColor, fontSize: 14),
           items: items
-              .map((city) => DropdownMenuItem(value: city, child: Text(city)))
+              .map((item) => DropdownMenuItem(value: item, child: Text(item)))
               .toList(),
           onChanged: onChanged,
         ),

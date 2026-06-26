@@ -72,12 +72,12 @@ class _CustomButtonState extends State<CustomButton> with SingleTickerProviderSt
           width: double.infinity,
           height: 52,
           decoration: BoxDecoration(
-            color: isEnabled ? const Color(0xFF0095F6) : const Color(0xFF0095F6).withValues(alpha: 0.6),
+            color: isEnabled ? Theme.of(context).primaryColor : Theme.of(context).primaryColor.withValues(alpha: 0.6),
             borderRadius: BorderRadius.circular(10),
             boxShadow: isEnabled
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF0095F6).withValues(alpha: 0.25),
+                      color: Theme.of(context).primaryColor.withValues(alpha: 0.25),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:truck_mate/features/main_navigation_screen.dart';
+import 'package:truck_mate/core/theme/app_theme.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../widgets/custom_button.dart';
@@ -326,7 +327,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   MediaQuery.of(context).padding.bottom -
                   kToolbarHeight,
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingLarge, vertical: 16),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -337,19 +338,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   children: [
                     RichText(
                       text: TextSpan(
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
+                        style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                           letterSpacing: -0.5,
-                          color: isDark
-                              ? Colors.white
-                              : const Color(0xFF1C1C1C),
                         ),
                         children: const [
                           TextSpan(text: 'Create '),
                           TextSpan(
                             text: 'Account',
-                            style: TextStyle(color: Color(0xFF0095F6)),
+                            style: TextStyle(color: AppTheme.primaryColor),
                           ),
                         ],
                       ),
@@ -357,11 +353,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     const SizedBox(height: 8),
                     Text(
                       'Join TruckMate and select your service category.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDark
-                            ? Colors.grey.shade400
-                            : Colors.grey.shade600,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                       ),
                     ),
                   ],

@@ -51,6 +51,7 @@ class MockProfileRepository implements ProfileRepository {
     
     final name = prefs.getString('user_name') ?? _profile.name;
     final role = prefs.getString('user_role') ?? _profile.role;
+    final state = prefs.getString('user_state');
     final city = prefs.getString('user_city');
     final mobile = prefs.getString('user_mobile');
     
@@ -65,7 +66,10 @@ class MockProfileRepository implements ProfileRepository {
     }
     
     final bioLines = [
-      if (city != null && city.isNotEmpty) 'Location: $city',
+      if (state != null && state.isNotEmpty && city != null && city.isNotEmpty)
+        'Location: $city, $state'
+      else if (city != null && city.isNotEmpty)
+        'Location: $city',
       if (mobile != null && mobile.isNotEmpty) 'Contact: $mobile',
       'Safe & On-time Delivery 🚚',
       'Pan India Services',
@@ -76,6 +80,8 @@ class MockProfileRepository implements ProfileRepository {
       role: role,
       avatarUrl: avatarUrl,
       bioLines: bioLines,
+      state: state,
+      city: city,
     );
     
     return _profile;

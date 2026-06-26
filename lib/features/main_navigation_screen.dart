@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'profile/presentation/screens/profile_screen.dart';
+import 'profile/presentation/screens/search_user_screen.dart';
 import 'posts/presentation/screens/posts_feed_screen.dart';
 import 'posts/presentation/screens/add_post_screen.dart';
 
@@ -13,6 +14,8 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0; // Start on the Home feed tab (index 0)
   final GlobalKey<PostsFeedScreenState> _feedKey = GlobalKey<PostsFeedScreenState>();
+  final GlobalKey<SearchUserScreenState> _searchKey = GlobalKey<SearchUserScreenState>();
+  final GlobalKey<ProfileScreenState> _profileKey = GlobalKey<ProfileScreenState>();
 
   late final List<Widget> _pages;
 
@@ -30,12 +33,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           _feedKey.currentState?.refreshFeed();
         },
       ),
-      const _PlaceholderScreen(
-        title: 'Search Loads & Fleet',
-        icon: Icons.search_rounded,
-        description: 'Find cargo loads, registered transporters, nearby mechanics, and active drivers.',
+      SearchUserScreen(
+        key: _searchKey,
+        onSetLocationRequested: () {
+          setState(() {
+            _selectedIndex = 3; // Redirect to Profile tab
+          });
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _profileKey.currentState?.showEditLocationSheet();
+          });
+        },
       ),
       ProfileScreen(
+        key: _profileKey,
         onPostDeleted: () {
           _feedKey.currentState?.refreshFeed();
         },
@@ -52,6 +62,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     setState(() {
       _selectedIndex = index;
     });
+    if (index == 2) {
+      _searchKey.currentState?.refreshLocationAndUsers();
+    }
   }
 
   @override

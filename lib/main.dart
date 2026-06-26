@@ -3,12 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'features/auth/presentation/screens/splash_screen.dart';
 import 'core/local_storage/datasources/theme_local_datasource.dart';
+import 'core/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
 
-  final themeDatasource = ThemeLocalDatasource();  
+  final themeDatasource = ThemeLocalDatasource();
   await themeDatasource.init();
   final savedThemeMode = await themeDatasource.getThemeMode();
 
@@ -58,35 +59,8 @@ class MyApp extends StatelessWidget {
             title: 'Truck Mate',
             debugShowCheckedModeBanner: false,
             themeMode: currentMode,
-            theme: ThemeData(
-              brightness: Brightness.light,
-              appBarTheme: const AppBarTheme(
-                systemOverlayStyle: SystemUiOverlayStyle.dark,
-              ),
-              colorScheme: ColorScheme.fromSeed(
-                brightness: Brightness.light,
-                seedColor: const Color(0xFF0095F6),
-                primary: const Color(0xFF0095F6),
-              ),
-              scaffoldBackgroundColor: Colors.white,
-              useMaterial3: true,
-            ),
-            darkTheme: ThemeData(
-              brightness: Brightness.dark,
-              scaffoldBackgroundColor: Colors.black,
-              appBarTheme: const AppBarTheme(
-                backgroundColor: Colors.black,
-                elevation: 0,
-                systemOverlayStyle: SystemUiOverlayStyle.light,
-              ),
-              colorScheme: ColorScheme.fromSeed(
-                brightness: Brightness.dark,
-                seedColor: const Color(0xFF0095F6),
-                primary: const Color(0xFF0095F6),
-                surface: Colors.black,
-              ),
-              useMaterial3: true,
-            ),
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
             home: const SplashScreen(),
           ),
         );

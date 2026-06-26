@@ -3,6 +3,8 @@ class UserProfile {
   final String role;
   final String avatarUrl;
   final List<String> bioLines;
+  final String? state;
+  final String? city;
   final bool isJoined;
 
   const UserProfile({
@@ -10,6 +12,8 @@ class UserProfile {
     required this.role,
     required this.avatarUrl,
     required this.bioLines,
+    this.state,
+    this.city,
     this.isJoined = false,
   });
 
@@ -18,6 +22,8 @@ class UserProfile {
     String? role,
     String? avatarUrl,
     List<String>? bioLines,
+    String? state,
+    String? city,
     bool? isJoined,
   }) {
     return UserProfile(
@@ -25,6 +31,8 @@ class UserProfile {
       role: role ?? this.role,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       bioLines: bioLines ?? this.bioLines,
+      state: state ?? this.state,
+      city: city ?? this.city,
       isJoined: isJoined ?? this.isJoined,
     );
   }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:truck_mate/core/theme/app_theme.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../domain/entities/post.dart';
 import '../../data/repositories/api_posts_repository.dart';
 import '../widgets/post_card.dart';
@@ -191,20 +193,34 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Simulating call to ${post.userName}... 📞',
+                        final contactNumber = post.contactNumber;
+                        if (contactNumber != null && contactNumber.isNotEmpty) {
+                          final Uri launchUri = Uri(
+                            scheme: 'tel',
+                            path: contactNumber,
+                          );
+                          try {
+                            await launchUrl(launchUri, mode: LaunchMode.externalApplication);
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Could not launch phone dialer for $contactNumber'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Phone number is unavailable'),
+                              backgroundColor: Colors.red,
                             ),
-                            backgroundColor: const Color(0xFF0095F6),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        );
+                          );
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green.shade600,
@@ -405,28 +421,18 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: isDark ? Colors.black : Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: isDark ? Colors.black : Colors.white,
-        elevation: 0,
-        centerTitle: true,
         title: RichText(
           text: TextSpan(
-            style: const TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
+            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
               letterSpacing: -0.8,
             ),
-            children: [
+            children: const [
+              TextSpan(text: 'Truck'),
               TextSpan(
-                text: 'Truck',
-                style: TextStyle(
-                  color: isDark ? Colors.white : const Color(0xFF1C1C1C),
-                ),
-              ),
-              const TextSpan(
                 text: 'Mate',
-                style: TextStyle(color: Color(0xFF0095F6)),
+                style: TextStyle(color: AppTheme.primaryColor),
               ),
             ],
           ),

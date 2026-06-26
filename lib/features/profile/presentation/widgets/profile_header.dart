@@ -6,6 +6,7 @@ class ProfileHeader extends StatefulWidget {
   final UserProfile profile;
   final VoidCallback onJoinToggled;
   final VoidCallback? onAvatarTapped;
+  final VoidCallback? onEditLocation;
   final bool isLoading;
 
   const ProfileHeader({
@@ -13,6 +14,7 @@ class ProfileHeader extends StatefulWidget {
     required this.profile,
     required this.onJoinToggled,
     this.onAvatarTapped,
+    this.onEditLocation,
     this.isLoading = false,
   });
 
@@ -62,10 +64,11 @@ class _ProfileHeaderState extends State<ProfileHeader> with SingleTickerProvider
 
     final defaultAvatar = CircleAvatar(
       radius: 45,
-      child: Icon(
+      backgroundColor: const Color(0xFF0D47A1),
+      child: const Icon(
         Icons.person,
         size: 50,
-        color: isDark ? Colors.white70 : Colors.grey,
+        color: Colors.white,
       ),
     );
 
@@ -237,6 +240,36 @@ class _ProfileHeaderState extends State<ProfileHeader> with SingleTickerProvider
                   ),
                 ),
               )),
+          const SizedBox(height: 12),
+          
+          // Edit Location Button
+          InkWell(
+            onTap: widget.onEditLocation,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                border: Border.all(color: isDark ? const Color(0xFF333333) : Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(8),
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.grey.shade50,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.edit_location_alt_rounded, size: 16, color: isDark ? Colors.white70 : Colors.grey.shade700),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Edit Location',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? Colors.white70 : Colors.grey.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 8),
         ],
       ),

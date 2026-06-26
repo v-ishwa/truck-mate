@@ -100,8 +100,9 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
                   child: CircleAvatar(
                     backgroundImage: post.avatarUrl.isNotEmpty ? NetworkImage(post.avatarUrl) : null,
                     radius: 20,
+                    backgroundColor: const Color(0xFF0D47A1),
                     child: post.avatarUrl.isEmpty
-                        ? Icon(Icons.person, size: 24, color: isDark ? Colors.white70 : Colors.grey)
+                        ? const Icon(Icons.person, size: 24, color: Colors.white)
                         : null,
                   ),
                 ),

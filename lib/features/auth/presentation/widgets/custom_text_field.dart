@@ -69,14 +69,14 @@ class _CustomPhoneFieldState extends State<CustomPhoneField> {
               color: hasError
                   ? Colors.red.shade400
                   : (_isFocused
-                      ? const Color(0xFF0095F6)
+                      ? Theme.of(context).primaryColor
                       : (isDark ? Colors.grey.shade800 : Colors.grey.shade300)),
               width: _isFocused || hasError ? 1.5 : 1.0,
             ),
             boxShadow: _isFocused
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF0095F6).withValues(alpha: 0.08),
+                      color: Theme.of(context).primaryColor.withValues(alpha: 0.08),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
                     ),
@@ -253,14 +253,14 @@ class _CustomTextFieldState extends State<CustomTextField> {
               color: hasError
                   ? Colors.red.shade400
                   : (_isFocused
-                      ? const Color(0xFF0095F6)
+                      ? Theme.of(context).primaryColor
                       : (isDark ? Colors.grey.shade800 : Colors.grey.shade300)),
               width: _isFocused || hasError ? 1.5 : 1.0,
             ),
             boxShadow: _isFocused
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF0095F6).withValues(alpha: 0.08),
+                      color: Theme.of(context).primaryColor.withValues(alpha: 0.08),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
                     ),
@@ -275,7 +275,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                   Icon(
                     widget.prefixIcon,
                     color: _isFocused
-                        ? const Color(0xFF0095F6)
+                        ? Theme.of(context).primaryColor
                         : (isDark ? Colors.grey.shade400 : Colors.grey.shade500),
                     size: 20,
                   ),
