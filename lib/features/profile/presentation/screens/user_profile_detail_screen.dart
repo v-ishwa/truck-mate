@@ -5,8 +5,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:truck_mate/core/network/api_constants.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../widgets/posts_grid.dart';
+import '../widgets/follow_button_widget.dart';
 import '../../domain/entities/profile_post.dart';
-import 'search_user_screen.dart'; 
+import '../../data/repositories/follow_repository.dart';
+import 'search_user_screen.dart';
+import 'followers_list_screen.dart';
+import 'following_list_screen.dart';
 
 class UserProfileDetailScreen extends StatefulWidget {
   final SearchUser user;
@@ -19,13 +23,46 @@ class UserProfileDetailScreen extends StatefulWidget {
 }
 
 class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
+  late SearchUser _user;
   List<ProfilePost> _userPosts = [];
   bool _isLoadingPosts = true;
+  bool _isLoadingStats = true;
+  int _followersCount = 0;
+  int _followingCount = 0;
+  bool _isFollowing = false;
+
+  final _followRepo = FollowRepository();
 
   @override
   void initState() {
     super.initState();
+    _user = widget.user;
+    _followersCount = widget.user.followersCount;
+    _followingCount = widget.user.followingCount;
+    _isFollowing = widget.user.isFollowing;
     _fetchUserPosts();
+    _fetchFollowStats();
+    // Re-fetch target user stats whenever any follow/unfollow fires
+    FollowRepository.followEventNotifier.addListener(_fetchFollowStats);
+  }
+
+  @override
+  void dispose() {
+    FollowRepository.followEventNotifier.removeListener(_fetchFollowStats);
+    super.dispose();
+  }
+
+  Future<void> _fetchFollowStats() async {
+    setState(() => _isLoadingStats = true);
+    final result = await _followRepo.getFollowStats(_user.id);
+    if (mounted) {
+      setState(() {
+        _followersCount = result.followersCount;
+        _followingCount = result.followingCount;
+        _isFollowing = result.isFollowing;
+        _isLoadingStats = false;
+      });
+    }
   }
 
   Future<void> _fetchUserPosts() async {
@@ -33,7 +70,7 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
       if (token != null) {
-        final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.posts}');
+        final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.userPosts}/${_user.id}');
         final response = await http
             .get(
               url,
@@ -46,37 +83,24 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
 
         if (response.statusCode == 200) {
           final List<dynamic> jsonList = json.decode(response.body);
-          final List<ProfilePost> fetchedPosts = [];
-
-          for (var jsonItem in jsonList) {
-            final postMobile = jsonItem['userMobileNumber'] as String?;
-            if (postMobile == widget.user.mobileNumber) {
-              String imageUrl = jsonItem['postImage'] as String? ?? '';
-              if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
-                imageUrl = '${ApiConstants.baseUrl}$imageUrl';
-              }
-              if (imageUrl.isEmpty) {
-                imageUrl =
-                    'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?q=80&w=400&auto=format&fit=crop';
-              }
-
-              String description =
-                  jsonItem['description'] as String? ?? 'No description';
-              DateTime uploadTime = DateTime.now();
-              if (jsonItem['createdAt'] != null) {
-                uploadTime = DateTime.parse(jsonItem['createdAt']);
-              }
-
-              fetchedPosts.add(
-                ProfilePost(
-                  id: jsonItem['id'].toString(),
-                  imageUrl: imageUrl,
-                  description: description,
-                  uploadTime: uploadTime,
-                ),
-              );
+          final List<ProfilePost> fetchedPosts = jsonList.map((jsonItem) {
+            String imageUrl = jsonItem['postImage'] as String? ?? '';
+            if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
+              imageUrl = '${ApiConstants.baseUrl}$imageUrl';
             }
-          }
+            if (imageUrl.isEmpty) {
+              imageUrl =
+                  'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?q=80&w=400&auto=format&fit=crop';
+            }
+            return ProfilePost(
+              id: jsonItem['id'].toString(),
+              imageUrl: imageUrl,
+              description: jsonItem['description'] as String? ?? '',
+              uploadTime: jsonItem['createdAt'] != null
+                  ? DateTime.parse(jsonItem['createdAt'])
+                  : DateTime.now(),
+            );
+          }).toList();
 
           if (mounted) {
             setState(() {
@@ -114,11 +138,11 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
                 children: [
                   CircleAvatar(
                     radius: 20,
-                    backgroundImage: widget.user.avatarUrl.isNotEmpty
-                        ? NetworkImage(widget.user.avatarUrl)
+                    backgroundImage: _user.avatarUrl.isNotEmpty
+                        ? NetworkImage(_user.avatarUrl)
                         : null,
                     backgroundColor: const Color(0xFF0D47A1),
-                    child: widget.user.avatarUrl.isEmpty
+                    child: _user.avatarUrl.isEmpty
                         ? const Icon(
                             Icons.person,
                             size: 20,
@@ -131,11 +155,11 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.user.name,
+                        _user.name,
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       Text(
-                        widget.user.role,
+                        _user.role,
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey.shade600,
@@ -162,6 +186,163 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
               Text(
                 'Uploaded on ${post.uploadTime.day}/${post.uploadTime.month}/${post.uploadTime.year}',
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showContactBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF161616) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color:
+                      isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5E9),
+                  shape: BoxShape.circle,
+                  border:
+                      Border.all(color: Colors.green.shade200, width: 2),
+                ),
+                child: Icon(
+                  Icons.phone_in_talk_rounded,
+                  color: Colors.green.shade700,
+                  size: 36,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Contact ${_user.name}',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : const Color(0xFF1C1C1C),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _user.mobileNumber.isNotEmpty
+                    ? _user.mobileNumber
+                    : 'Contact number unavailable',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: isDark
+                      ? const Color(0xFF64B5F6)
+                      : const Color(0xFF0095F6),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        side: BorderSide(
+                          color: isDark
+                              ? const Color(0xFF333333)
+                              : Colors.grey.shade300,
+                        ),
+                      ),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(
+                          color: isDark
+                              ? Colors.white70
+                              : const Color(0xFF1C1C1C),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        final contactNumber = _user.mobileNumber;
+                        if (contactNumber.isNotEmpty) {
+                          final Uri launchUri = Uri(
+                            scheme: 'tel',
+                            path: contactNumber,
+                          );
+                          try {
+                            await launchUrl(launchUri,
+                                mode: LaunchMode.externalApplication);
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                      'Could not launch phone dialer for $contactNumber'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Phone number is unavailable'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade600,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Call Now',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -219,11 +400,11 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
                 children: [
                   CircleAvatar(
                     radius: 40,
-                    backgroundImage: widget.user.avatarUrl.isNotEmpty
-                        ? NetworkImage(widget.user.avatarUrl)
+                    backgroundImage: _user.avatarUrl.isNotEmpty
+                        ? NetworkImage(_user.avatarUrl)
                         : null,
                     backgroundColor: const Color(0xFF0D47A1),
-                    child: widget.user.avatarUrl.isEmpty
+                    child: _user.avatarUrl.isEmpty
                         ? const Icon(
                             Icons.person,
                             size: 40,
@@ -237,11 +418,38 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         _buildStatColumn(
-                          _isLoadingPosts ? '-' : _userPosts.length.toString(),
+                          _isLoadingPosts
+                              ? '-'
+                              : _userPosts.length.toString(),
                           'Posts',
+                          onTap: null,
                         ),
-                        _buildStatColumn(widget.user.age.toString(), 'Age'),
-                        _buildStatColumn(widget.user.role, 'Role'),
+                        _buildStatColumn(
+                          _isLoadingStats ? '-' : _followersCount.toString(),
+                          'Followers',
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => FollowersListScreen(
+                                userId: _user.id,
+                                userName: _user.name,
+                              ),
+                            ),
+                          ).then((_) => _fetchFollowStats()),
+                        ),
+                        _buildStatColumn(
+                          _isLoadingStats ? '-' : _followingCount.toString(),
+                          'Following',
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => FollowingListScreen(
+                                userId: _user.id,
+                                userName: _user.name,
+                              ),
+                            ),
+                          ).then((_) => _fetchFollowStats()),
+                        ),
                       ],
                     ),
                   ),
@@ -258,7 +466,7 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
                   Row(
                     children: [
                       Text(
-                        widget.user.name,
+                        _user.name,
                         style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.bold,
@@ -276,7 +484,7 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          widget.user.role,
+                          _user.role,
                           style: TextStyle(
                             color: roleTextColor,
                             fontSize: 11,
@@ -296,7 +504,7 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${widget.user.city}, ${widget.user.state}',
+                        '${_user.city}, ${_user.state}',
                         style: TextStyle(
                           fontSize: 14,
                           color: subTextColor,
@@ -307,7 +515,7 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    widget.user.bio,
+                    _user.bio,
                     style: TextStyle(
                       fontSize: 14,
                       color: subTextColor,
@@ -320,62 +528,62 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
 
             const SizedBox(height: 20),
 
-            // Contact button
+            // Follow and Contact Button Row
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: Row(
                 children: [
+                  // Follow Button (real API)
+                  Expanded(
+                    child: FollowButton(
+                      targetUserId: _user.id,
+                      initialIsFollowing: _isFollowing,
+                      onChanged: (result) {
+                        // Update follow state immediately (optimistic)
+                        setState(() {
+                          _isFollowing = result.isFollowing;
+                          _followersCount = result.followersCount;
+                          _followingCount = result.followingCount;
+                        });
+                        // Re-fetch from DB for guaranteed real-time accuracy
+                        _fetchFollowStats();
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Contact Button
                   Expanded(
                     child: GestureDetector(
-                      onTap: () async {
-                        final mobile = widget.user.mobileNumber;
-                        if (mobile.isNotEmpty) {
-                          final Uri launchUri = Uri(
-                            scheme: 'tel',
-                            path: mobile,
-                          );
-                          try {
-                            await launchUrl(launchUri, mode: LaunchMode.externalApplication);
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).clearSnackBars();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Could not launch phone dialer for $mobile'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          }
-                        } else {
-                          ScaffoldMessenger.of(context).clearSnackBars();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Phone number is unavailable'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      },
+                      onTap: _showContactBottomSheet,
                       child: Container(
                         height: 44,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0095F6),
+                          color: isDark
+                              ? const Color(0xFF262626)
+                              : const Color(0xFFEFEFEF),
                           borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: isDark
+                                  ? const Color(0xFF363636)
+                                  : const Color(0xFFDBDBDB),
+                              width: 1),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
                               Icons.phone_rounded,
-                              color: Colors.white,
-                              size: 18,
+                              color:
+                                  isDark ? Colors.white70 : Colors.black87,
+                              size: 16,
                             ),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             Text(
-                              'Contact User',
+                              'Contact',
                               style: TextStyle(
-                                color: Colors.white,
+                                color: isDark
+                                    ? Colors.white70
+                                    : Colors.black87,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                               ),
@@ -418,29 +626,30 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
                     ),
                   )
                 : _userPosts.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(40.0),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.photo_library_outlined,
-                            size: 48,
-                            color: Colors.grey.shade400,
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(40.0),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.photo_library_outlined,
+                                size: 48,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'No posts yet',
+                                style: TextStyle(
+                                  color: Colors.grey.shade500,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'No posts yet',
-                            style: TextStyle(
-                              color: Colors.grey.shade500,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : PostsGrid(posts: _userPosts, onPostTap: _showPostDetails),
+                        ),
+                      )
+                    : PostsGrid(
+                        posts: _userPosts, onPostTap: _showPostDetails),
             const SizedBox(height: 40),
           ],
         ),
@@ -448,28 +657,35 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
     );
   }
 
-  Widget _buildStatColumn(String count, String label) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          count,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+  Widget _buildStatColumn(String count, String label, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            count,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w400,
-            color: Colors.grey.shade500,
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
+              color: onTap != null
+                  ? const Color(0xFF0095F6)
+                  : Colors.grey.shade500,
+              decoration:
+                  onTap != null ? TextDecoration.none : TextDecoration.none,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

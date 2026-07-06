@@ -8,6 +8,7 @@ class PostCard extends StatefulWidget {
   final VoidCallback onBookmarkPressed;
   final VoidCallback onCallPressed;
   final VoidCallback onMoreMenuPressed;
+  final VoidCallback? onProfilePressed;
 
   const PostCard({
     super.key,
@@ -16,6 +17,7 @@ class PostCard extends StatefulWidget {
     required this.onBookmarkPressed,
     required this.onCallPressed,
     required this.onMoreMenuPressed,
+    this.onProfilePressed,
   });
 
   @override
@@ -87,61 +89,72 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
             child: Row(
               children: [
-                // User Avatar
-                Container(
-                  padding: const EdgeInsets.all(1.5),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isDark ? const Color(0xFF363636) : Colors.grey.shade300,
-                      width: 1.5,
-                    ),
-                  ),
-                  child: CircleAvatar(
-                    backgroundImage: post.avatarUrl.isNotEmpty ? NetworkImage(post.avatarUrl) : null,
-                    radius: 20,
-                    backgroundColor: const Color(0xFF0D47A1),
-                    child: post.avatarUrl.isEmpty
-                        ? const Icon(Icons.person, size: 24, color: Colors.white)
-                        : null,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                
-                // User Name and Metadata
+                // Wrapped Avatar and Name in GestureDetector
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        post.userName,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: widget.onProfilePressed,
+                    child: Row(
+                      children: [
+                        // User Avatar
+                        Container(
+                          padding: const EdgeInsets.all(1.5),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF363636) : Colors.grey.shade300,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: CircleAvatar(
+                            backgroundImage: post.avatarUrl.isNotEmpty ? NetworkImage(post.avatarUrl) : null,
+                            radius: 20,
+                            backgroundColor: const Color(0xFF0D47A1),
+                            child: post.avatarUrl.isEmpty
+                                ? const Icon(Icons.person, size: 24, color: Colors.white)
+                                : null,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Text(
-                            post.role,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: isDark ? const Color(0xFF64B5F6) : const Color(0xFF0095F6),
-                            ),
+                        const SizedBox(width: 12),
+                        
+                        // User Name and Metadata
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                post.userName,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: textColor,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Text(
+                                    post.role,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: isDark ? const Color(0xFF64B5F6) : const Color(0xFF0095F6),
+                                    ),
+                                  ),
+                                  Text(
+                                    '  •  ${post.timeAgo}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: secondaryTextColor,
+                                    ),
+                                  ),
+                                  ],
+                              ),
+                            ],
                           ),
-                          Text(
-                            '  •  ${post.timeAgo}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: secondaryTextColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 

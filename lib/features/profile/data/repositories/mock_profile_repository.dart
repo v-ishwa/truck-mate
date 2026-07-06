@@ -16,18 +16,6 @@ class MockProfileRepository implements ProfileRepository {
   late UserProfile _profile;
   final List<ProfilePost> _posts = [];
 
-  final List<String> _truckImages = [
-    'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?q=80&w=400&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1591768793355-74d75b50f58f?q=80&w=400&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=400&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1516576880881-148f8f68740b?q=80&w=400&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?q=80&w=400&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1532601224476-15c79f2f7a51?q=80&w=400&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1616422285623-13ff0162193c?q=80&w=400&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1501700490688-6161b2b58f6b?q=80&w=400&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1592838064808-04a4b518410b?q=80&w=400&auto=format&fit=crop',
-  ];
-
   void _initMockData() {
     _profile = const UserProfile(
       name: 'Ramesh Transport',
@@ -39,6 +27,8 @@ class MockProfileRepository implements ProfileRepository {
         'Contact for load bookings.',
       ],
       isJoined: false,
+      followersCount: 1250,
+      followingCount: 482,
     );
 
     _posts.clear();
@@ -92,10 +82,10 @@ class MockProfileRepository implements ProfileRepository {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('auth_token');
-      final userMobile = prefs.getString('user_mobile');
+      final userId = prefs.getInt('user_id');
 
-      if (token != null && userMobile != null) {
-        final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.posts}');
+      if (token != null && userId != null) {
+        final url = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.userPosts}/$userId');
         final response = await http.get(
           url,
           headers: {
@@ -106,53 +96,44 @@ class MockProfileRepository implements ProfileRepository {
 
         if (response.statusCode == 200) {
           final List<dynamic> jsonList = json.decode(response.body);
-          
-          final List<ProfilePost> fetchedPosts = [];
-          for (var jsonItem in jsonList) {
-            final postMobile = jsonItem['userMobileNumber'] as String?;
-            if (postMobile == userMobile) {
-              
-              String imageUrl = jsonItem['postImage'] as String? ?? '';
-              if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
-                imageUrl = '${ApiConstants.baseUrl}$imageUrl';
-              }
-              if (imageUrl.isEmpty) {
-                // Fallback to placeholder if no image
-                imageUrl = 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?q=80&w=400&auto=format&fit=crop';
-              }
-              
-              String description = jsonItem['description'] as String? ?? 'No description';
-              
-              DateTime uploadTime = DateTime.now();
-              if (jsonItem['createdAt'] != null) {
-                uploadTime = DateTime.parse(jsonItem['createdAt']);
-              }
-              
-              fetchedPosts.add(ProfilePost(
-                id: jsonItem['id'].toString(),
-                imageUrl: imageUrl,
-                description: description,
-                uploadTime: uploadTime,
-              ));
+          final List<ProfilePost> fetchedPosts = jsonList.map((jsonItem) {
+            String imageUrl = jsonItem['postImage'] as String? ?? '';
+            if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
+              imageUrl = '${ApiConstants.baseUrl}$imageUrl';
             }
-          }
-          
+            if (imageUrl.isEmpty) {
+              imageUrl = 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?q=80&w=400&auto=format&fit=crop';
+            }
+            return ProfilePost(
+              id: jsonItem['id'].toString(),
+              imageUrl: imageUrl,
+              description: jsonItem['description'] as String? ?? '',
+              uploadTime: jsonItem['createdAt'] != null
+                  ? DateTime.parse(jsonItem['createdAt'])
+                  : DateTime.now(),
+            );
+          }).toList();
+
           _posts.clear();
           _posts.addAll(fetchedPosts);
           return _posts;
         }
       }
     } catch (e) {
-      // Fallback to mock data if API fails or no token
+      // Fallback to cached posts if API fails
     }
-    
+
     return List.unmodifiable(_posts);
   }
 
   @override
   Future<UserProfile> toggleJoinMembership() async {
     await Future.delayed(const Duration(milliseconds: 100));
-    _profile = _profile.copyWith(isJoined: !_profile.isJoined);
+    final bool newJoin = !_profile.isJoined;
+    _profile = _profile.copyWith(
+      isJoined: newJoin,
+      followersCount: newJoin ? _profile.followersCount + 1 : _profile.followersCount - 1,
+    );
     return _profile;
   }
 

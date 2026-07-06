@@ -2,6 +2,7 @@ import '../../../../core/network/api_constants.dart';
 
 class Post {
   final String id;
+  final int userId;  // ID of the user who created this post
   final String userName;
   final String role;
   final String avatarUrl;
@@ -22,6 +23,7 @@ class Post {
 
   const Post({
     required this.id,
+    required this.userId,
     required this.userName,
     required this.role,
     required this.avatarUrl,
@@ -75,6 +77,7 @@ class Post {
 
     return Post(
       id: (json['id'] ?? 0).toString(),
+      userId: (json['userId'] as num?)?.toInt() ?? 0,
       userName: json['userName'] ?? 'Unknown',
       role: json['userRole'] ?? 'User',
       avatarUrl: _buildImageUrl(json['userProfilePicture'] as String?),
@@ -127,6 +130,7 @@ class Post {
 
   Post copyWith({
     String? id,
+    int? userId,
     String? userName,
     String? role,
     String? avatarUrl,
@@ -147,6 +151,7 @@ class Post {
   }) {
     return Post(
       id: id ?? this.id,
+      userId: userId ?? this.userId,
       userName: userName ?? this.userName,
       role: role ?? this.role,
       avatarUrl: avatarUrl ?? this.avatarUrl,

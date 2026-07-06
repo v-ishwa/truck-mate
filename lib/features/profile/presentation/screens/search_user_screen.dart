@@ -17,6 +17,9 @@ class SearchUser {
   final String avatarUrl;
   final String bio;
   final String mobileNumber;
+  final int followersCount;
+  final int followingCount;
+  final bool isFollowing;
 
   const SearchUser({
     required this.id,
@@ -28,7 +31,40 @@ class SearchUser {
     required this.avatarUrl,
     required this.bio,
     required this.mobileNumber,
+    required this.followersCount,
+    required this.followingCount,
+    this.isFollowing = false,
   });
+
+  SearchUser copyWith({
+    int? id,
+    String? name,
+    String? role,
+    int? age,
+    String? state,
+    String? city,
+    String? avatarUrl,
+    String? bio,
+    String? mobileNumber,
+    int? followersCount,
+    int? followingCount,
+    bool? isFollowing,
+  }) {
+    return SearchUser(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      role: role ?? this.role,
+      age: age ?? this.age,
+      state: state ?? this.state,
+      city: city ?? this.city,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      bio: bio ?? this.bio,
+      mobileNumber: mobileNumber ?? this.mobileNumber,
+      followersCount: followersCount ?? this.followersCount,
+      followingCount: followingCount ?? this.followingCount,
+      isFollowing: isFollowing ?? this.isFollowing,
+    );
+  }
 
   factory SearchUser.fromJson(Map<String, dynamic> json) {
     int calculateAge(dynamic dobVal) {
@@ -61,8 +97,10 @@ class SearchUser {
       mappedRole = 'Mechanic';
     }
 
+    final userId = json['id'] as int? ?? 0;
+
     return SearchUser(
-      id: json['id'] as int? ?? 0,
+      id: userId,
       name: json['name'] as String? ?? 'Unknown',
       role: mappedRole,
       age: calculateAge(json['dob']),
@@ -71,6 +109,9 @@ class SearchUser {
       avatarUrl: avatarUrl,
       bio: 'Ready for loads and jobs.',
       mobileNumber: json['mobileNumber'] as String? ?? '',
+      followersCount: (json['followersCount'] as num?)?.toInt() ?? 0,
+      followingCount: (json['followingCount'] as num?)?.toInt() ?? 0,
+      isFollowing: json['isFollowing'] as bool? ?? json['following'] as bool? ?? false,
     );
   }
 }
@@ -837,6 +878,157 @@ class SearchUserScreenState extends State<SearchUserScreen> {
     );
   }
 
+  void _showContactBottomSheet(SearchUser user) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF161616) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F5E9),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.green.shade200, width: 2),
+                ),
+                child: Icon(
+                  Icons.phone_in_talk_rounded,
+                  color: Colors.green.shade700,
+                  size: 36,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Contact ${user.name}',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : const Color(0xFF1C1C1C),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                user.mobileNumber.isNotEmpty ? user.mobileNumber : 'Contact number unavailable',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: isDark
+                      ? const Color(0xFF64B5F6)
+                      : const Color(0xFF0095F6),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        side: BorderSide(
+                          color: isDark
+                              ? const Color(0xFF333333)
+                              : Colors.grey.shade300,
+                        ),
+                      ),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(
+                          color: isDark
+                              ? Colors.white70
+                              : const Color(0xFF1C1C1C),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        final contactNumber = user.mobileNumber;
+                        if (contactNumber.isNotEmpty) {
+                          final Uri launchUri = Uri(
+                            scheme: 'tel',
+                            path: contactNumber,
+                          );
+                          try {
+                            await launchUrl(launchUri, mode: LaunchMode.externalApplication);
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Could not launch phone dialer for $contactNumber'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          }
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Phone number is unavailable'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade600,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Call Now',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildUserCard(SearchUser user, bool isDark) {
     final cardBgColor = isDark ? const Color(0xFF161616) : Colors.white;
     final borderColor = isDark ? const Color(0xFF262626) : Colors.grey.shade200;
@@ -960,35 +1152,7 @@ class SearchUserScreenState extends State<SearchUserScreen> {
             const SizedBox(height: 16),
             // Contact Button
             GestureDetector(
-              onTap: () async {
-                final mobile = user.mobileNumber;
-                final messenger = ScaffoldMessenger.of(context);
-                if (mobile.isNotEmpty) {
-                  final Uri launchUri = Uri(
-                    scheme: 'tel',
-                    path: mobile,
-                  );
-                  try {
-                    await launchUrl(launchUri, mode: LaunchMode.externalApplication);
-                  } catch (e) {
-                    messenger.clearSnackBars();
-                    messenger.showSnackBar(
-                      SnackBar(
-                        content: Text('Could not launch phone dialer for $mobile'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                } else {
-                  messenger.clearSnackBars();
-                  messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('Phone number is unavailable'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
+              onTap: () => _showContactBottomSheet(user),
               child: Container(
                 height: 40,
                 decoration: BoxDecoration(

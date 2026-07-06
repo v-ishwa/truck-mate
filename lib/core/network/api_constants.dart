@@ -27,4 +27,14 @@ class ApiConstants {
   static const String uploadProfileImage = '/api/upload/profile-image';
   static const String searchUsers = '/api/users/search';
   static const String updateProfile = '/api/users/profile';
+  static const String userPosts = '/api/posts/user'; // GET /api/posts/user/{userId}
+
+  // Follow endpoints
+  static const String follows = '/api/follows';
+
+  /// Follow a user:    POST  /api/follows/{targetId}
+  /// Unfollow a user:  DELETE /api/follows/{targetId}
+  /// Followers list:   GET   /api/follows/{userId}/followers
+  /// Following list:   GET   /api/follows/{userId}/following
+  /// Follow stats:     GET   /api/follows/{userId}/stats
 }

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -11,6 +10,7 @@ import '../../domain/entities/profile_post.dart';
 import '../../domain/entities/user_profile.dart';
 import '../../domain/repositories/profile_repository.dart';
 import '../../data/repositories/mock_profile_repository.dart';
+import '../../data/repositories/follow_repository.dart';
 import '../widgets/profile_header.dart';
 import '../widgets/posts_grid.dart';
 import '../widgets/fallback_posts_view.dart';
@@ -18,6 +18,8 @@ import 'package:truck_mate/core/local_storage/datasources/theme_local_datasource
 import 'package:truck_mate/features/auth/domain/repositories/auth_repository.dart';
 import 'package:truck_mate/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:truck_mate/features/auth/presentation/screens/login_screen.dart';
+import 'followers_list_screen.dart';
+import 'following_list_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final VoidCallback? onPostDeleted;
@@ -37,8 +39,14 @@ class ProfileScreenState extends State<ProfileScreen> {
   void showEditLocationSheet() {
     _showEditLocationSheet();
   }
+
+  Future<void> refreshProfile() async {
+    await _loadProfileData(false);
+  }
   final ProfileRepository _repository = MockProfileRepository();
   final AuthRepository _authRepository = AuthRepositoryImpl();
+  final FollowRepository _followRepository = FollowRepository();
+  int? _ownUserId;
   UserProfile _profile = const UserProfile(
     name: 'Loading...',
     role: '',
@@ -220,23 +228,24 @@ class ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Curated list of premium truck photo URLs from Unsplash
-  final List<String> _truckImages = [
-    'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?q=80&w=400&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1591768793355-74d75b50f58f?q=80&w=400&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=400&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1516576880881-148f8f68740b?q=80&w=400&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?q=80&w=400&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1532601224476-15c79f2f7a51?q=80&w=400&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1616422285623-13ff0162193c?q=80&w=400&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1501700490688-6161b2b58f6b?q=80&w=400&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1592838064808-04a4b518410b?q=80&w=400&auto=format&fit=crop',
-  ];
+
 
   @override
   void initState() {
     super.initState();
     _loadProfileData();
+    // Re-fetch own stats whenever any follow/unfollow occurs in the app
+    FollowRepository.followEventNotifier.addListener(_onFollowEvent);
+  }
+
+  void _onFollowEvent() {
+    _loadProfileData(false);
+  }
+
+  @override
+  void dispose() {
+    FollowRepository.followEventNotifier.removeListener(_onFollowEvent);
+    super.dispose();
   }
 
   Future<void> _loadProfileData([bool showLoading = true]) async {
@@ -246,11 +255,31 @@ class ProfileScreenState extends State<ProfileScreen> {
       });
     }
     try {
+      // Load own userId from prefs (set during login)
+      if (_ownUserId == null) {
+        final prefs = await SharedPreferences.getInstance();
+        final id = prefs.getInt('user_id');
+        if (id != null && mounted) {
+          setState(() => _ownUserId = id);
+        }
+      }
+
       final profile = await _repository.getUserProfile();
       final posts = await _repository.getUploadedPosts();
+
+      // Fetch real follower/following counts for own profile
+      UserProfile enrichedProfile = profile;
+      if (_ownUserId != null) {
+        final stats = await _followRepository.getFollowStats(_ownUserId!);
+        enrichedProfile = profile.copyWith(
+          followersCount: stats.followersCount,
+          followingCount: stats.followingCount,
+        );
+      }
+
       if (mounted) {
         setState(() {
-          _profile = profile;
+          _profile = enrichedProfile;
           _allPosts = posts;
           if (showLoading) {
             _isLoading = false;
@@ -268,45 +297,6 @@ class ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void _toggleJoin() async {
-    try {
-      final updatedProfile = await _repository.toggleJoinMembership();
-      if (mounted) {
-        setState(() {
-          _profile = updatedProfile;
-        });
-
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(
-                  _profile.isJoined ? Icons.check_circle_rounded : Icons.info_outline_rounded,
-                  color: Colors.white,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(_profile.isJoined
-                      ? 'Welcome! You have joined Ramesh Transport membership.'
-                      : 'You have left Ramesh Transport membership.'),
-                ),
-              ],
-            ),
-            backgroundColor: _profile.isJoined ? Colors.green.shade600 : const Color(0xFF1C1C1C),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            margin: const EdgeInsets.all(16),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      // Handle error
-    }
-  }
 
   void _showEditLocationSheet() {
     String? tempState = _profile.state;
@@ -847,10 +837,32 @@ class ProfileScreenState extends State<ProfileScreen> {
                     SliverToBoxAdapter(
                       child: ProfileHeader(
                         profile: _profile,
-                        onJoinToggled: _toggleJoin,
+                        postsCount: _allPosts.length,
                         onAvatarTapped: _showImageSourceSheet,
                         onEditLocation: _showEditLocationSheet,
                         isLoading: _isProfilePicLoading,
+                        onFollowersTap: _ownUserId == null
+                            ? null
+                            : () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => FollowersListScreen(
+                                      userId: _ownUserId!,
+                                      userName: _profile.name,
+                                    ),
+                                  ),
+                                ),
+                        onFollowingTap: _ownUserId == null
+                            ? null
+                            : () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => FollowingListScreen(
+                                      userId: _ownUserId!,
+                                      userName: _profile.name,
+                                    ),
+                                  ),
+                                ),
                       ),
                     ),
 

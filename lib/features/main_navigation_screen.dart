@@ -64,6 +64,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     });
     if (index == 2) {
       _searchKey.currentState?.refreshLocationAndUsers();
+    } else if (index == 3) {
+      _profileKey.currentState?.refreshProfile();
     }
   }
 
@@ -148,74 +150,3 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 }
 
-class _PlaceholderScreen extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final String description;
-
-  const _PlaceholderScreen({
-    required this.title,
-    required this.icon,
-    required this.description,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Scaffold(
-      backgroundColor: isDark ? Colors.black : Colors.white,
-      appBar: AppBar(
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white : const Color(0xFF1C1C1C),
-          ),
-        ),
-        backgroundColor: isDark ? Colors.black : Colors.white,
-        elevation: 0,
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0095F6).withValues(alpha: isDark ? 0.15 : 0.05),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  icon,
-                  size: 64,
-                  color: const Color(0xFF0095F6),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : const Color(0xFF1C1C1C),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                description,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isDark ? const Color(0xFFA8A8A8) : Colors.grey.shade600,
-                  height: 1.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

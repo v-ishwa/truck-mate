@@ -4,6 +4,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../domain/entities/post.dart';
 import '../../data/repositories/api_posts_repository.dart';
 import '../widgets/post_card.dart';
+import '../../../profile/presentation/screens/user_profile_detail_screen.dart';
+import '../../../profile/presentation/screens/search_user_screen.dart';
 
 class PostsFeedScreen extends StatefulWidget {
   const PostsFeedScreen({super.key});
@@ -95,6 +97,41 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
     } catch (e) {
       // Handle error
     }
+  }
+
+  void _handleProfilePressed(Post post) {
+    String city = 'Chennai';
+    String state = 'Tamil Nadu';
+    if (post.fromLocation != null && post.fromLocation!.contains(',')) {
+      final parts = post.fromLocation!.split(',');
+      if (parts.length >= 2) {
+        city = parts[0].trim();
+        state = parts[1].trim();
+      } else if (parts.isNotEmpty) {
+        city = parts[0].trim();
+      }
+    }
+
+    final user = SearchUser(
+      id: post.userId,   // ✅ real user ID from backend
+      name: post.userName,
+      role: post.role,
+      age: 0,
+      state: state,
+      city: city,
+      avatarUrl: post.avatarUrl,
+      bio: 'Services: ${post.role}. Contact for bookings.',
+      mobileNumber: post.contactNumber ?? '',
+      followersCount: 0,   // profile screen will fetch real counts
+      followingCount: 0,
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => UserProfileDetailScreen(user: user),
+      ),
+    );
   }
 
   void _handleCallOwner(Post post) {
@@ -653,6 +690,7 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                                       onCallPressed: () => _handleCallOwner(post),
                                       onMoreMenuPressed: () =>
                                           _handleMoreOptions(post),
+                                      onProfilePressed: () => _handleProfilePressed(post),
                                     );
                                   },
                                 ),

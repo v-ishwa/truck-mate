@@ -6,6 +6,8 @@ class UserProfile {
   final String? state;
   final String? city;
   final bool isJoined;
+  final int followersCount;
+  final int followingCount;
 
   const UserProfile({
     required this.name,
@@ -15,6 +17,8 @@ class UserProfile {
     this.state,
     this.city,
     this.isJoined = false,
+    this.followersCount = 0,
+    this.followingCount = 0,
   });
 
   UserProfile copyWith({
@@ -25,6 +29,8 @@ class UserProfile {
     String? state,
     String? city,
     bool? isJoined,
+    int? followersCount,
+    int? followingCount,
   }) {
     return UserProfile(
       name: name ?? this.name,
@@ -34,6 +40,8 @@ class UserProfile {
       state: state ?? this.state,
       city: city ?? this.city,
       isJoined: isJoined ?? this.isJoined,
+      followersCount: followersCount ?? this.followersCount,
+      followingCount: followingCount ?? this.followingCount,
     );
   }
 }

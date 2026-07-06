@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/user_profile.dart';
-import 'package:truck_mate/core/network/api_constants.dart';
 
 class ProfileHeader extends StatefulWidget {
   final UserProfile profile;
-  final VoidCallback onJoinToggled;
+  final int postsCount;
   final VoidCallback? onAvatarTapped;
   final VoidCallback? onEditLocation;
+  final VoidCallback? onFollowersTap;
+  final VoidCallback? onFollowingTap;
   final bool isLoading;
 
   const ProfileHeader({
     super.key,
     required this.profile,
-    required this.onJoinToggled,
+    required this.postsCount,
     this.onAvatarTapped,
     this.onEditLocation,
+    this.onFollowersTap,
+    this.onFollowingTap,
     this.isLoading = false,
   });
 
@@ -22,44 +25,46 @@ class ProfileHeader extends StatefulWidget {
   State<ProfileHeader> createState() => _ProfileHeaderState();
 }
 
-class _ProfileHeaderState extends State<ProfileHeader> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 100),
-      lowerBound: 0.92,
-      upperBound: 1.0,
-      value: 1.0,
+class _ProfileHeaderState extends State<ProfileHeader> {
+  Widget _buildStatColumn(
+    BuildContext context,
+    String value,
+    String label, {
+    VoidCallback? onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : const Color(0xFF1C1C1C),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w400,
+              color: onTap != null
+                  ? const Color(0xFF0095F6)
+                  : (isDark ? const Color(0xFFA8A8A8) : const Color(0xFF4A4A4A)),
+            ),
+          ),
+        ],
+      ),
     );
-    _scaleAnimation = _controller;
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _onTapDown(TapDownDetails details) {
-    _controller.reverse();
-  }
-
-  void _onTapUp(TapUpDetails details) {
-    _controller.forward();
-  }
-
-  void _onTapCancel() {
-    _controller.forward();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isJoined = widget.profile.isJoined;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final defaultAvatar = CircleAvatar(
@@ -77,7 +82,7 @@ class _ProfileHeaderState extends State<ProfileHeader> with SingleTickerProvider
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row with Avatar and Join Button
+          // Row with Avatar and Stats
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -139,68 +144,27 @@ class _ProfileHeaderState extends State<ProfileHeader> with SingleTickerProvider
                   ],
                 ),
               ),
-              const SizedBox(width: 32),
+              const SizedBox(width: 24),
               
-              // Join Button on the right
+              // Stats next to Avatar (Instagram layout)
               Expanded(
-                child: GestureDetector(
-                  onTapDown: _onTapDown,
-                  onTapUp: _onTapUp,
-                  onTapCancel: _onTapCancel,
-                  onTap: widget.onJoinToggled,
-                  child: ScaleTransition(
-                    scale: _scaleAnimation,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      height: 44,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: isJoined
-                            ? (isDark ? const Color(0xFF1B5E20).withValues(alpha: 0.15) : const Color(0xFFE8F5E9))
-                            : const Color(0xFF0095F6),
-                        borderRadius: BorderRadius.circular(10),
-                        border: isJoined
-                            ? Border.all(color: isDark ? const Color(0xFF2E7D32) : const Color(0xFF81C784), width: 1.5)
-                            : null,
-                        boxShadow: isJoined
-                            ? null
-                            : [
-                                BoxShadow(
-                                  color: const Color(0xFF0095F6).withValues(alpha: 0.2),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                      ),
-                      child: AnimatedSize(
-                        duration: const Duration(milliseconds: 200),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (isJoined) ...[
-                              Icon(
-                                Icons.check_circle_rounded,
-                                color: isDark ? const Color(0xFF81C784) : const Color(0xFF2E7D32),
-                                size: 18,
-                              ),
-                              const SizedBox(width: 8),
-                            ],
-                            Text(
-                              isJoined ? 'Joined' : 'Join',
-                              style: TextStyle(
-                                color: isJoined
-                                    ? (isDark ? const Color(0xFF81C784) : const Color(0xFF2E7D32))
-                                    : Colors.white,
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildStatColumn(context, widget.postsCount.toString(), 'Posts'),
+                    _buildStatColumn(
+                      context,
+                      widget.profile.followersCount.toString(),
+                      'Followers',
+                      onTap: widget.onFollowersTap,
                     ),
-                  ),
+                    _buildStatColumn(
+                      context,
+                      widget.profile.followingCount.toString(),
+                      'Following',
+                      onTap: widget.onFollowingTap,
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -240,7 +204,7 @@ class _ProfileHeaderState extends State<ProfileHeader> with SingleTickerProvider
                   ),
                 ),
               )),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           
           // Edit Location Button
           InkWell(
