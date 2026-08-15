@@ -1,21 +1,74 @@
 ﻿import 'package:flutter/material.dart';
-import '../../domain/entities/profile_post.dart';
+import '../../domain/entities/vehicle.dart';
 import 'package:truck_mate/core/widgets/truck_illustration.dart';
 
-class PostsGrid extends StatelessWidget {
-  final List<ProfilePost> posts;
-  final Function(ProfilePost)? onPostTap;
+// ─────────────────────────────────────────────────────────────────────────────
+// Mock vehicle list — matches the screenshot.
+// TODO: Replace with real API data when backend is ready.
+// ─────────────────────────────────────────────────────────────────────────────
+final List<Vehicle> kMockVehicles = [
+  const Vehicle(
+    id: 'v1',
+    tyreType: '6 Tyre · Container',
+    tyreCount: 6,
+    driverName: 'Ravi Kumar',
+    driverRating: '4.8',
+    driverStatus: 'On duty',
+  ),
+  const Vehicle(
+    id: 'v2',
+    tyreType: '10 Tyre · Open Body',
+    tyreCount: 10,
+    driverName: 'Murugan P.',
+    driverRating: '4.6',
+    driverStatus: 'On duty',
+  ),
+  const Vehicle(
+    id: 'v3',
+    tyreType: '4 Tyre · Mini (Dost)',
+    tyreCount: 4,
+  ),
+  const Vehicle(
+    id: 'v4',
+    tyreType: '6 Tyre · Container',
+    tyreCount: 6,
+  ),
+  const Vehicle(
+    id: 'v5',
+    tyreType: '8 Tyre · Tanker',
+    tyreCount: 8,
+    driverName: 'Selvam V.',
+    driverRating: '4.5',
+    driverStatus: 'On duty',
+  ),
+  const Vehicle(
+    id: 'v6',
+    tyreType: '4 Tyre · Mini (Dost)',
+    tyreCount: 4,
+    driverName: 'Arun K.',
+    driverRating: '4.3',
+    driverStatus: 'Off duty',
+  ),
+];
 
-  const PostsGrid({
+// ─────────────────────────────────────────────────────────────────────────────
+// Main grid widget
+// ─────────────────────────────────────────────────────────────────────────────
+class VehiclesGrid extends StatelessWidget {
+  final List<Vehicle>? vehicles; // null → use mock data
+  final Function(Vehicle)? onVehicleTap;
+
+  const VehiclesGrid({
     super.key,
-    required this.posts,
-    this.onPostTap,
+    this.vehicles,
+    this.onVehicleTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pageBg = isDark ? Colors.black : const Color(0xFFEBF3FF);
+    final list = vehicles ?? kMockVehicles;
 
     return Container(
       color: pageBg,
@@ -23,18 +76,17 @@ class PostsGrid extends StatelessWidget {
       child: GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        itemCount: posts.length,
+        itemCount: list.length,
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
-          childAspectRatio: 0.85,
+          childAspectRatio: 0.88,
         ),
         itemBuilder: (context, index) {
-          final post = posts[index];
           return _VehicleCard(
-            post: post,
-            onTap: () => onPostTap?.call(post),
+            vehicle: list[index],
+            onTap: () => onVehicleTap?.call(list[index]),
           );
         },
       ),
@@ -42,21 +94,14 @@ class PostsGrid extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Individual vehicle card
+// ─────────────────────────────────────────────────────────────────────────────
 class _VehicleCard extends StatelessWidget {
-  final ProfilePost post;
+  final Vehicle vehicle;
   final VoidCallback onTap;
 
-  const _VehicleCard({required this.post, required this.onTap});
-
-  /// Extracts vehicle type label (e.g. "6 Tyre · Container") from description
-  String get _vehicleType {
-    final desc = post.description;
-    if (desc.length <= 30) return desc;
-    return '${desc.substring(0, 28)}...';
-  }
-
-  /// True if this vehicle has a driver assigned (imageUrl is non-empty heuristic)
-  bool get _hasDriver => post.imageUrl.isNotEmpty;
+  const _VehicleCard({required this.vehicle, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -68,9 +113,6 @@ class _VehicleCard extends StatelessWidget {
         isDark ? const Color(0xFF0F1C3F) : const Color(0xFFE8F0FE);
     final truckColor =
         isDark ? const Color(0xFF3D6CBF) : const Color(0xFF1565C0);
-
-    // Parse tyre count from description to pick the right illustration
-    final tyres = TruckIllustration.parseTyreCount(post.description);
 
     return GestureDetector(
       onTap: onTap,
@@ -91,11 +133,11 @@ class _VehicleCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Vehicle type label
+            // ── Tyre type label ────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
               child: Text(
-                _vehicleType,
+                vehicle.tyreType,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -106,11 +148,11 @@ class _VehicleCard extends StatelessWidget {
               ),
             ),
 
-            // Truck illustration area
+            // ── Vehicle image / illustration area ─────────────────
             Expanded(
               child: Stack(
                 children: [
-                  // Blue-tinted bg + illustration
+                  // Image or illustration
                   Padding(
                     padding: const EdgeInsets.all(10),
                     child: Container(
@@ -118,52 +160,59 @@ class _VehicleCard extends StatelessWidget {
                         color: truckBg,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: post.imageUrl.isNotEmpty
+                      child: vehicle.imageUrl != null &&
+                              vehicle.imageUrl!.isNotEmpty
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(12),
                               child: Image.network(
-                                post.imageUrl,
+                                vehicle.imageUrl!,
                                 fit: BoxFit.cover,
                                 width: double.infinity,
                                 errorBuilder: (context, error, stackTrace) =>
-                                    _TruckIllustrationBox(
-                                        tyres: tyres, color: truckColor),
+                                    _TruckPlaceholder(
+                                  tyreCount: vehicle.tyreCount,
+                                  color: truckColor,
+                                ),
                               ),
                             )
-                          : _TruckIllustrationBox(
-                              tyres: tyres, color: truckColor),
+                          : _TruckPlaceholder(
+                              tyreCount: vehicle.tyreCount,
+                              color: truckColor,
+                            ),
                     ),
                   ),
 
-                  // Driver badge (top-right)
+                  // Driver badge (top-right corner of the illustration box)
                   Positioned(
                     top: 14,
                     right: 14,
-                    child: _hasDriver
-                        ? _DriverBadge(driverInitial: _getInitial())
-                        : _AddDriverBadge(),
+                    child: vehicle.hasDriver
+                        ? _DriverBadge(initials: vehicle.driverInitials)
+                        : const _AddDriverBadge(),
                   ),
                 ],
               ),
             ),
 
-            // Driver info
+            // ── Driver info row ───────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-              child: _hasDriver
+              padding: const EdgeInsets.fromLTRB(12, 2, 12, 12),
+              child: vehicle.hasDriver
                   ? Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _driverName,
+                          vehicle.driverName!,
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF16A34A),
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          'On duty · 4.8 rating',
+                          '${vehicle.driverStatus ?? "On duty"} · ${vehicle.driverRating ?? "-"} rating',
                           style: TextStyle(
                             fontSize: 11,
                             color: isDark
@@ -201,50 +250,34 @@ class _VehicleCard extends StatelessWidget {
       ),
     );
   }
-
-  String get _driverName {
-    final desc = post.description;
-    if (desc.contains(' - ')) return desc.split(' - ').first;
-    return 'Driver';
-  }
-
-  String _getInitial() {
-    final name = _driverName;
-    if (name.isEmpty) return 'D';
-    final parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    }
-    return name[0].toUpperCase();
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helper: centred truck illustration inside the card's image area
+// Truck line-art placeholder (centred inside the blue card area)
 // ─────────────────────────────────────────────────────────────────────────────
-class _TruckIllustrationBox extends StatelessWidget {
-  final int tyres;
+class _TruckPlaceholder extends StatelessWidget {
+  final int tyreCount;
   final Color color;
-  const _TruckIllustrationBox({required this.tyres, required this.color});
+  const _TruckPlaceholder({required this.tyreCount, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: TruckIllustration(
-        tyreCount: tyres,
+        tyreCount: tyreCount,
         color: color,
-        size: const Size(130, 56),
+        size: const Size(130, 55),
       ),
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Driver badge widgets
+// Driver badge — blue circle with initials
 // ─────────────────────────────────────────────────────────────────────────────
 class _DriverBadge extends StatelessWidget {
-  final String driverInitial;
-  const _DriverBadge({required this.driverInitial});
+  final String initials;
+  const _DriverBadge({required this.initials});
 
   @override
   Widget build(BuildContext context) {
@@ -265,11 +298,12 @@ class _DriverBadge extends StatelessWidget {
       ),
       child: Center(
         child: Text(
-          driverInitial,
+          initials,
           style: const TextStyle(
             color: Colors.white,
             fontSize: 11,
             fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
           ),
         ),
       ),
@@ -277,7 +311,12 @@ class _DriverBadge extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Add-driver badge — amber circle with + icon
+// ─────────────────────────────────────────────────────────────────────────────
 class _AddDriverBadge extends StatelessWidget {
+  const _AddDriverBadge();
+
   @override
   Widget build(BuildContext context) {
     return Container(

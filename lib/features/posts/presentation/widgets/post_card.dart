@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../domain/entities/post.dart';
 import 'route_info_card.dart';
+import 'package:truck_mate/core/widgets/truck_illustration.dart';
 
 class PostCard extends StatefulWidget {
   final Post post;
@@ -68,56 +69,76 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
   Widget build(BuildContext context) {
     final post = widget.post;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    final textColor = isDark ? Colors.white : const Color(0xFF1C1C1C);
-    final secondaryTextColor = isDark ? const Color(0xFFA8A8A8) : Colors.grey.shade600;
-    final dividerColor = isDark ? const Color(0xFF262626) : Colors.grey.shade100;
+
+    final cardBg = isDark ? const Color(0xFF1A1A2E) : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF1A1A2E);
+    final subtitleColor = isDark ? const Color(0xFFB0B8D0) : const Color(0xFF6B7280);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: isDark ? Colors.black : Colors.white,
-        border: Border(
-          bottom: BorderSide(color: dividerColor, width: 0.5),
-        ),
+        color: cardBg,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.4)
+                : const Color(0xFF1A3A6B).withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Post Header
+          // ── 1. Post Header ──────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            padding: const EdgeInsets.fromLTRB(16, 16, 8, 12),
             child: Row(
               children: [
-                // Wrapped Avatar and Name in GestureDetector
                 Expanded(
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: widget.onProfilePressed,
                     child: Row(
                       children: [
-                        // User Avatar
+                        // Avatar
                         Container(
-                          padding: const EdgeInsets.all(1.5),
+                          width: 46,
+                          height: 46,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isDark ? const Color(0xFF363636) : Colors.grey.shade300,
-                              width: 1.5,
-                            ),
+                            color: const Color(0xFF1565C0),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF1565C0).withValues(alpha: 0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                          child: CircleAvatar(
-                            backgroundImage: post.avatarUrl.isNotEmpty ? NetworkImage(post.avatarUrl) : null,
-                            radius: 20,
-                            backgroundColor: const Color(0xFF0D47A1),
-                            child: post.avatarUrl.isEmpty
-                                ? const Icon(Icons.person, size: 24, color: Colors.white)
-                                : null,
-                          ),
+                          child: post.avatarUrl.isNotEmpty
+                              ? ClipOval(
+                                  child: Image.network(
+                                    post.avatarUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => const Icon(
+                                      Icons.local_shipping_rounded,
+                                      color: Colors.white,
+                                      size: 24,
+                                    ),
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.local_shipping_rounded,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
                         ),
                         const SizedBox(width: 12),
-                        
-                        // User Name and Metadata
+
+                        // Name + subtitle
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -125,30 +146,22 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
                               Text(
                                 post.userName,
                                 style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
                                   color: textColor,
+                                  letterSpacing: 0.1,
                                 ),
                               ),
                               const SizedBox(height: 2),
-                              Row(
-                                children: [
-                                  Text(
-                                    post.role,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: isDark ? const Color(0xFF64B5F6) : const Color(0xFF0095F6),
-                                    ),
-                                  ),
-                                  Text(
-                                    '  •  ${post.timeAgo}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: secondaryTextColor,
-                                    ),
-                                  ),
-                                  ],
+                              Text(
+                                post.role,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: subtitleColor,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
@@ -157,126 +170,181 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
                     ),
                   ),
                 ),
-                
+
+                // More menu button
                 IconButton(
-                  icon: Icon(Icons.more_vert, color: textColor),
+                  icon: Icon(
+                    Icons.more_horiz_rounded,
+                    color: subtitleColor,
+                    size: 22,
+                  ),
                   onPressed: widget.onMoreMenuPressed,
+                  splashRadius: 20,
                 ),
               ],
             ),
           ),
-          
-          // 2. Multiline Status Description
-          Padding(
-            padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 12.0),
-            child: Text(
-              post.statusText,
-              style: TextStyle(
-                fontSize: 14,
-                color: textColor,
-                height: 1.4,
-              ),
+
+          // ── 2. Truck Illustration / Image Area ────────────────────
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            height: 150,
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF0F1C3F) : const Color(0xFFE8F0FE),
+              borderRadius: BorderRadius.circular(16),
             ),
+            child: post.imageUrl.isNotEmpty
+                ? GestureDetector(
+                    onDoubleTap: _handleDoubleTap,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.network(
+                            post.imageUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: 150,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: isDark ? Colors.white38 : const Color(0xFF1565C0),
+                                ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) =>
+                                _buildTruckPlaceholder(isDark),
+                          ),
+                        ),
+                        if (_showDoubleTapLikeOverlay)
+                          AnimatedBuilder(
+                            animation: _heartScaleAnim,
+                            builder: (context, child) {
+                              return Transform.scale(
+                                scale: _heartScaleAnim.value,
+                                child: const Icon(
+                                  Icons.favorite,
+                                  color: Colors.white,
+                                  size: 90,
+                                  shadows: [
+                                    BoxShadow(
+                                      color: Colors.black38,
+                                      blurRadius: 20,
+                                      offset: Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                  )
+                : _buildTruckPlaceholder(isDark),
           ),
-          
-          // 3. Main Post Image (Interactive with Double-Tap to Like animation)
-          if (post.imageUrl.isNotEmpty)
-          GestureDetector(
-            onDoubleTap: _handleDoubleTap,
-            child: Stack(
-              alignment: Alignment.center,
+
+          // ── 3. Message + Call Buttons ─────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+            child: Row(
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: AspectRatio(
-                      aspectRatio: 4 / 3,
-                      child: Image.network(
-                        post.imageUrl,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Container(
-                            color: isDark ? const Color(0xFF161616) : Colors.grey.shade100,
-                            child: const Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Color(0xFF0095F6),
-                              ),
-                            ),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: isDark ? const Color(0xFF161616) : Colors.grey.shade100,
-                            child: Center(
-                              child: Icon(
-                                Icons.broken_image_rounded,
-                                size: 48,
-                                color: isDark ? Colors.white24 : Colors.grey.shade300,
-                              ),
-                            ),
-                          );
-                        },
+                // Message button (outlined)
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {},
+                    icon: Icon(
+                      Icons.chat_bubble_outline_rounded,
+                      size: 16,
+                      color: isDark ? Colors.white70 : const Color(0xFF374151),
+                    ),
+                    label: Text(
+                      'Message',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white70 : const Color(0xFF374151),
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      side: BorderSide(
+                        color: isDark ? Colors.white24 : const Color(0xFFD1D5DB),
+                        width: 1.5,
                       ),
                     ),
                   ),
                 ),
-                
-                // Double tap animated heart overlay
-                if (_showDoubleTapLikeOverlay)
-                  AnimatedBuilder(
-                    animation: _heartScaleAnim,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: _heartScaleAnim.value,
-                        child: const Icon(
-                          Icons.favorite,
-                          color: Colors.white,
-                          size: 90,
-                          shadows: [
-                            BoxShadow(
-                              color: Colors.black38,
-                              blurRadius: 20,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                const SizedBox(width: 12),
+
+                // Call Owner button (filled blue)
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: widget.onCallPressed,
+                    icon: const Icon(
+                      Icons.phone_in_talk_rounded,
+                      size: 16,
+                      color: Colors.white,
+                    ),
+                    label: const Text(
+                      'Call Owner',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1565C0),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
+                ),
               ],
             ),
           ),
-          
-          // 4. Action Row (Likes, Comments, Shares, Bookmark)
-// Action row (likes, comments, share, bookmark) removed
-SizedBox.shrink(),
-          
-// Caption and tags removed
-SizedBox.shrink(),
-          
-          // 6. Route Info Card
+
+          // ── 4. Route Info ─────────────────────────────────────────
           if (post.hasRouteCard &&
               post.fromLocation != null &&
               post.toLocation != null &&
               post.departureTime != null)
             Padding(
-              padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 12.0),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
               child: RouteInfoCard(
                 fromLocation: post.fromLocation!,
                 toLocation: post.toLocation!,
                 departureTime: post.departureTime!,
                 onCallPressed: widget.onCallPressed,
               ),
-            ),
-            
-          const SizedBox(height: 12),
+            )
+          else
+            const SizedBox(height: 16),
         ],
       ),
     );
   }
 
-
+  Widget _buildTruckPlaceholder(bool isDark) {
+    final tyres = TruckIllustration.parseTyreCount(widget.post.role);
+    final truckColor =
+        isDark ? const Color(0xFF3D6CBF) : const Color(0xFF1565C0);
+    return Center(
+      child: TruckIllustration(
+        tyreCount: tyres,
+        color: truckColor,
+        size: const Size(220, 90),
+      ),
+    );
+  }
 }

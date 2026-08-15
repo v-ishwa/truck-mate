@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:truck_mate/core/theme/app_theme.dart';
+
+
 import 'package:url_launcher/url_launcher.dart';
 import '../../domain/entities/post.dart';
 import '../../data/repositories/api_posts_repository.dart';
@@ -458,60 +459,103 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: isDark ? Colors.black : const Color(0xFFEBF3FF),
       appBar: AppBar(
+        backgroundColor: isDark ? const Color(0xFF0A0A1A) : Colors.white,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        leading: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFEBF3FF),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.local_shipping_rounded,
+              color: isDark ? const Color(0xFF4A90D9) : const Color(0xFF1565C0),
+              size: 22,
+            ),
+          ),
+        ),
         title: RichText(
           text: TextSpan(
-            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-              letterSpacing: -0.8,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
             ),
-            children: const [
-              TextSpan(text: 'Truck'),
+            children: [
               TextSpan(
+                text: 'Truck',
+                style: TextStyle(
+                  color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                ),
+              ),
+              const TextSpan(
                 text: 'Mate',
-                style: TextStyle(color: AppTheme.primaryColor),
+                style: TextStyle(color: Color(0xFF1565C0)),
               ),
             ],
           ),
         ),
+        centerTitle: true,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFEBF3FF),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.location_on_outlined,
+                color: isDark ? const Color(0xFF4A90D9) : const Color(0xFF1565C0),
+                size: 22,
+              ),
+            ),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(
           children: [
-            // Location Search and Filter row
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: 16.0,
-                vertical: 8.0,
+                vertical: 10.0,
               ),
               child: Row(
                 children: [
                   Expanded(
                     child: Container(
-                      height: 46,
+                      height: 48,
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF161616)
-                            : Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: isDark
-                              ? const Color(0xFF262626)
-                              : Colors.grey.shade200,
-                          width: 1,
-                        ),
+                        color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: isDark
+                                ? Colors.black.withValues(alpha: 0.3)
+                                : const Color(0xFF1A3A6B).withValues(alpha: 0.06),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
                       child: Row(
                         children: [
                           Icon(
-                            Icons.location_on_outlined,
+                            Icons.search_rounded,
                             color: isDark
-                                ? Colors.white60
-                                : Colors.grey.shade600,
+                                ? Colors.white38
+                                : const Color(0xFF9CA3AF),
                             size: 20,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: TextField(
                               onChanged: (value) {
@@ -523,14 +567,14 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                                 fontSize: 14,
                                 color: isDark
                                     ? Colors.white
-                                    : const Color(0xFF1C1C1C),
+                                    : const Color(0xFF1A1A2E),
                               ),
                               decoration: InputDecoration(
-                                hintText: 'Search by location',
+                                hintText: 'Search by location or name...',
                                 hintStyle: TextStyle(
                                   color: isDark
-                                      ? Colors.white38
-                                      : Colors.grey.shade400,
+                                      ? Colors.white24
+                                      : const Color(0xFF9CA3AF),
                                   fontSize: 14,
                                 ),
                                 border: InputBorder.none,
@@ -543,29 +587,32 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   GestureDetector(
                     onTap: _handleFilterTap,
                     child: Container(
-                      height: 46,
+                      height: 48,
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.black : Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: isDark
-                              ? const Color(0xFF262626)
-                              : Colors.grey.shade200,
-                          width: 1,
-                        ),
+                        color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: isDark
+                                ? Colors.black.withValues(alpha: 0.3)
+                                : const Color(0xFF1A3A6B).withValues(alpha: 0.06),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Row(
                         children: [
                           Icon(
                             Icons.tune_rounded,
                             color: isDark
-                                ? Colors.white
-                                : const Color(0xFF1C1C1C),
+                                ? const Color(0xFF4A90D9)
+                                : const Color(0xFF1565C0),
                             size: 18,
                           ),
                           const SizedBox(width: 6),
@@ -573,10 +620,10 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                             'Filter',
                             style: TextStyle(
                               fontSize: 14,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                               color: isDark
-                                  ? Colors.white
-                                  : const Color(0xFF1C1C1C),
+                                  ? const Color(0xFF4A90D9)
+                                  : const Color(0xFF1565C0),
                             ),
                           ),
                         ],
@@ -679,6 +726,7 @@ class PostsFeedScreenState extends State<PostsFeedScreen> {
                               : ListView.builder(
                                   controller: _scrollController,
                                   physics: const AlwaysScrollableScrollPhysics(),
+                                  padding: const EdgeInsets.only(top: 4, bottom: 24),
                                   itemCount: filteredPosts.length,
                                   itemBuilder: (context, index) {
                                     final post = filteredPosts[index];

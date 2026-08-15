@@ -12,8 +12,7 @@ import '../../domain/repositories/profile_repository.dart';
 import '../../data/repositories/mock_profile_repository.dart';
 import '../../data/repositories/follow_repository.dart';
 import '../widgets/profile_header.dart';
-import '../widgets/posts_grid.dart';
-import '../widgets/fallback_posts_view.dart';
+import '../widgets/vehicles_grid.dart';
 import 'package:truck_mate/core/local_storage/datasources/theme_local_datasource.dart';
 import 'package:truck_mate/features/auth/domain/repositories/auth_repository.dart';
 import 'package:truck_mate/features/auth/data/repositories/auth_repository_impl.dart';
@@ -707,7 +706,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(20),
                            child: _profile.avatarUrl.isNotEmpty
-                              ? Image.network(_profile.avatarUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const CircleAvatar(radius: 20, backgroundColor: Color(0xFF0D47A1), child: Icon(Icons.person, size: 24, color: Colors.white)))
+                              ? Image.network(_profile.avatarUrl, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => const CircleAvatar(radius: 20, backgroundColor: Color(0xFF0D47A1), child: Icon(Icons.person, size: 24, color: Colors.white)))
                               : const CircleAvatar(radius: 20, backgroundColor: Color(0xFF0D47A1), child: Icon(Icons.person, size: 24, color: Colors.white)),
                         ),
                       ),
@@ -763,17 +762,63 @@ class ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isEmpty = _showEmptyState || _allPosts.isEmpty;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: isDark ? Colors.black : const Color(0xFFEBF3FF),
       appBar: AppBar(
-        title: Text(_profile.name),
+        backgroundColor: isDark ? const Color(0xFF0A0A1A) : Colors.white,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+            size: 20,
+          ),
+          onPressed: () => Navigator.maybePop(context),
+        ),
+        title: RichText(
+          text: TextSpan(
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
+            children: [
+              TextSpan(
+                text: 'Truck',
+                style: TextStyle(
+                  color: isDark ? Colors.white : const Color(0xFF1A1A2E),
+                ),
+              ),
+              const TextSpan(
+                text: 'Mate',
+                style: TextStyle(color: Color(0xFF1565C0)),
+              ),
+            ],
+          ),
+        ),
+        centerTitle: true,
         actions: [
-          // Developer simulation menu (the 3-dots in reference UI)
           PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert, color: isDark ? Colors.white : const Color(0xFF1C1C1C)),
+            icon: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF1A1A2E)
+                    : const Color(0xFFEBF3FF),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.settings_outlined,
+                color: isDark
+                    ? const Color(0xFF4A90D9)
+                    : const Color(0xFF1565C0),
+                size: 20,
+              ),
+            ),
             onSelected: (value) {
               if (value == 'change_theme') {
                 _showThemeSelectionDialog();
@@ -786,11 +831,8 @@ class ProfileScreenState extends State<ProfileScreen> {
                 value: 'change_theme',
                 child: Row(
                   children: const [
-                    Icon(
-                      Icons.palette_outlined,
-                      size: 20,
-                      color: Color(0xFF0095F6),
-                    ),
+                    Icon(Icons.palette_outlined,
+                        size: 20, color: Color(0xFF1565C0)),
                     SizedBox(width: 10),
                     Text('Change Theme'),
                   ],
@@ -801,17 +843,21 @@ class ProfileScreenState extends State<ProfileScreen> {
                 value: 'logout',
                 child: Row(
                   children: const [
-                    Icon(Icons.logout_rounded, size: 20, color: Colors.redAccent),
+                    Icon(Icons.logout_rounded,
+                        size: 20, color: Colors.redAccent),
                     SizedBox(width: 10),
                     Text(
                       'Logout',
-                      style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          color: Colors.redAccent,
+                          fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
               ),
             ],
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: SafeArea(
@@ -829,7 +875,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                     });
                   }
                 },
-                color: const Color(0xFF0095F6),
+                color: const Color(0xFF1565C0),
                 child: CustomScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
@@ -837,7 +883,7 @@ class ProfileScreenState extends State<ProfileScreen> {
                     SliverToBoxAdapter(
                       child: ProfileHeader(
                         profile: _profile,
-                        postsCount: _allPosts.length,
+                        postsCount: kMockVehicles.length,
                         onAvatarTapped: _showImageSourceSheet,
                         onEditLocation: _showEditLocationSheet,
                         isLoading: _isProfilePicLoading,
@@ -866,24 +912,17 @@ class ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
 
-                    // Post content or fallback
-                    if (isEmpty)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: FallbackPostsView(
-                          onUploadPressed: widget.onNavigateToAddPost ?? () {},
-                        ),
-                      )
-                    else
-                      SliverPadding(
-                        padding: const EdgeInsets.only(top: 2),
-                        sliver: SliverToBoxAdapter(
-                          child: PostsGrid(
-                            posts: _allPosts,
-                            onPostTap: _showPostDetails,
-                          ),
+                    // Vehicles grid (always shown, mock data for now)
+                    SliverPadding(
+                      padding: const EdgeInsets.only(top: 2),
+                      sliver: SliverToBoxAdapter(
+                        child: VehiclesGrid(
+                          onVehicleTap: (vehicle) {
+                            // TODO: show vehicle detail sheet
+                          },
                         ),
                       ),
+                    ),
                   ],
                 ),
               ),

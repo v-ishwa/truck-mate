@@ -17,181 +17,92 @@ class RouteInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    // Theme-specific colors
-    final cardBgColor = isDark ? const Color(0xFF161616) : const Color(0xFFF9F9F9);
-    final borderColor = isDark ? const Color(0xFF262626) : Colors.grey.shade200;
-    final dividerColor = isDark ? const Color(0xFF262626) : Colors.grey.shade300;
-    final primaryTextColor = isDark ? Colors.white : const Color(0xFF1C1C1C);
-    final secondaryTextColor = isDark ? const Color(0xFFA8A8A8) : Colors.grey.shade600;
-    final iconColor = isDark ? Colors.white70 : const Color(0xFF1C1C1C);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: cardBgColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor, width: 1),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      child: IntrinsicHeight(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final primaryTextColor = isDark ? Colors.white : const Color(0xFF1A1A2E);
+    final secondaryTextColor = isDark ? const Color(0xFFB0B8D0) : const Color(0xFF6B7280);
+
+    // Parse departureTime — expected format: "20 Jan 2026 08:30 AM" or similar
+    // We'll split on first space-separated token groups: date part vs time part
+    String datePart = '';
+    String timePart = '';
+    final parts = departureTime.trim().split(' ');
+    if (parts.length >= 4) {
+      // e.g. "20 Jan 2026 08:30 AM" → date = "20 Jan 2026", time = "08:30 AM"
+      datePart = '${parts[0]} ${parts[1]} ${parts[2]}';
+      timePart = parts.sublist(3).join(' ');
+    } else if (parts.length >= 2) {
+      datePart = parts[0];
+      timePart = parts.sublist(1).join(' ');
+    } else {
+      timePart = departureTime;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Route row: From → To
+        Row(
           children: [
-            // From Location
-            Expanded(
-              child: Row(
-                children: [
-                  Icon(Icons.location_on_outlined, size: 20, color: iconColor),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'From',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: secondaryTextColor,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          fromLocation,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: primaryTextColor,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+            Text(
+              fromLocation,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: primaryTextColor,
               ),
             ),
-            
-            // Divider
-            VerticalDivider(color: dividerColor, thickness: 1, width: 16),
-            
-            // To Location
-            Expanded(
-              child: Row(
-                children: [
-                  Icon(Icons.location_on_outlined, size: 20, color: iconColor),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'To',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: secondaryTextColor,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          toLocation,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: primaryTextColor,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Icon(
+                Icons.arrow_forward_rounded,
+                size: 18,
+                color: isDark ? const Color(0xFF3D6CBF) : const Color(0xFF1565C0),
               ),
             ),
-            
-            // Divider
-            VerticalDivider(color: dividerColor, thickness: 1, width: 16),
-            
-            // Departure Time
-            Expanded(
-              child: Row(
-                children: [
-                  Icon(Icons.access_time_rounded, size: 18, color: iconColor),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Time',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: secondaryTextColor,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          departureTime,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: primaryTextColor,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            const SizedBox(width: 4),
-
-            // Call Owner Button
-            GestureDetector(
-              onTap: onCallPressed,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E88E5) : const Color(0xFF1A1A1A),
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.phone_in_talk_rounded, size: 14, color: Colors.white),
-                    const SizedBox(width: 6),
-                    const Text(
-                      'Call Owner',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
+            Text(
+              toLocation,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: primaryTextColor,
               ),
             ),
           ],
         ),
-      ),
+
+        const SizedBox(height: 8),
+
+        // Date, Time, Price row
+        Row(
+          children: [
+            // Date in green
+            if (datePart.isNotEmpty) ...[
+              Text(
+                datePart,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF16A34A),
+                ),
+              ),
+              const SizedBox(width: 10),
+            ],
+
+            // Time
+            if (timePart.isNotEmpty) ...[
+              Text(
+                timePart,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: secondaryTextColor,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
     );
   }
 }
+
