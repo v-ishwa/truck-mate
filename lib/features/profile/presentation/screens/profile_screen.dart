@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:truck_mate/core/network/api_constants.dart';
+import 'package:truck_mate/core/widgets/truck_illustration.dart';
 import 'package:truck_mate/core/constants/app_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:truck_mate/main.dart';
@@ -19,15 +21,16 @@ import 'package:truck_mate/features/auth/data/repositories/auth_repository_impl.
 import 'package:truck_mate/features/auth/presentation/screens/login_screen.dart';
 import 'followers_list_screen.dart';
 import 'following_list_screen.dart';
+import 'package:truck_mate/features/vehicles/presentation/screens/add_vehicle_screen.dart';
+import '../../domain/entities/vehicle.dart';
+import 'package:truck_mate/features/vehicles/domain/entities/vehicle_form.dart';
 
 class ProfileScreen extends StatefulWidget {
   final VoidCallback? onPostDeleted;
-  final VoidCallback? onNavigateToAddPost;
 
   const ProfileScreen({
     super.key,
     this.onPostDeleted,
-    this.onNavigateToAddPost,
   });
 
   @override
@@ -54,10 +57,375 @@ class ProfileScreenState extends State<ProfileScreen> {
     isJoined: false,
   );
   List<ProfilePost> _allPosts = [];
+  List<Vehicle> _vehicles = [];
   bool _showEmptyState = false;
   bool _isLoading = true;
   bool _isProfilePicLoading = false;
   final ImagePicker _picker = ImagePicker();
+
+  Future<String> _getVehiclesStorageKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = _ownUserId ?? prefs.getInt('user_id');
+    if (userId != null) {
+      return 'user_vehicles_$userId';
+    }
+    final mobile = prefs.getString('user_mobile');
+    if (mobile != null && mobile.isNotEmpty) {
+      return 'user_vehicles_$mobile';
+    }
+    return 'user_vehicles_default';
+  }
+
+  Future<void> _loadVehicles() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = await _getVehiclesStorageKey();
+      var jsonStr = prefs.getString(key);
+
+      // Legacy migration: check if previously saved under generic 'user_vehicles'
+      if (jsonStr == null || jsonStr.isEmpty) {
+        final legacyJsonStr = prefs.getString('user_vehicles');
+        if (legacyJsonStr != null && legacyJsonStr.isNotEmpty) {
+          jsonStr = legacyJsonStr;
+          await prefs.setString(key, legacyJsonStr);
+          await prefs.remove('user_vehicles');
+        }
+      }
+
+      if (jsonStr != null && jsonStr.isNotEmpty) {
+        final List<dynamic> list = json.decode(jsonStr);
+        if (mounted) {
+          setState(() {
+            _vehicles = list
+                .map((e) => Vehicle.fromJson(e as Map<String, dynamic>))
+                .toList();
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _vehicles = [];
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _vehicles = [];
+        });
+      }
+    }
+  }
+
+  Future<void> _saveVehicles() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = await _getVehiclesStorageKey();
+      final jsonStr = json.encode(_vehicles.map((v) => v.toJson()).toList());
+      await prefs.setString(key, jsonStr);
+    } catch (e) {
+      // Handle error
+    }
+  }
+
+  Future<void> _confirmDeleteVehicle(Vehicle vehicle) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final vehicleName = (vehicle.vehicleNumber != null && vehicle.vehicleNumber!.isNotEmpty)
+        ? vehicle.vehicleNumber!
+        : vehicle.tyreType;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1E1E2E) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Remove Vehicle',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : const Color(0xFF0F2C59),
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to remove "$vehicleName" from your profile? This cannot be undone.',
+          style: TextStyle(
+            fontSize: 14,
+            color: isDark ? Colors.white70 : const Color(0xFF475569),
+          ),
+        ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: isDark ? Colors.white60 : Colors.grey.shade600,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() {
+        _vehicles.removeWhere((v) => v.id == vehicle.id);
+      });
+      await _saveVehicles();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Vehicle "$vehicleName" removed'),
+            backgroundColor: const Color(0xFF1565C0),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showVehicleDetailModal(Vehicle vehicle) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final truckColor = isDark ? const Color(0xFF3D6CBF) : const Color(0xFF1565C0);
+    final truckBg = isDark ? const Color(0xFF0F1C3F) : const Color(0xFFE8F0FE);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF161616) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 16,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Vehicle Details',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : const Color(0xFF0F2C59),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => Navigator.pop(context),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Container(
+                height: 140,
+                decoration: BoxDecoration(
+                  color: truckBg,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: _buildVehicleModalImage(vehicle, truckColor),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1F1F1F) : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF2E2E2E) : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    _buildModalRow(
+                      icon: Icons.tag_rounded,
+                      label: 'Vehicle Number',
+                      value: vehicle.vehicleNumber?.isNotEmpty == true
+                          ? vehicle.vehicleNumber!
+                          : 'Not specified',
+                      isDark: isDark,
+                      isHighlighted: true,
+                    ),
+                    const Divider(height: 20),
+                    _buildModalRow(
+                      icon: Icons.local_shipping_outlined,
+                      label: 'Body Type',
+                      value: vehicle.tyreType,
+                      isDark: isDark,
+                    ),
+                    if (vehicle.hasDriver) ...[
+                      const Divider(height: 20),
+                      _buildModalRow(
+                        icon: Icons.person_outline_rounded,
+                        label: 'Assigned Driver',
+                        value: '${vehicle.driverName} (${vehicle.driverStatus ?? "On duty"})',
+                        isDark: isDark,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _confirmDeleteVehicle(vehicle);
+                },
+                icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                label: const Text(
+                  'Remove Vehicle',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isDark ? const Color(0xFF2A1515) : const Color(0xFFFEE2E2),
+                  foregroundColor: const Color(0xFFDC2626),
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFCA5A5),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildVehicleModalImage(Vehicle vehicle, Color truckColor) {
+    if (vehicle.imageUrl != null && vehicle.imageUrl!.isNotEmpty) {
+      if (vehicle.imageUrl!.startsWith('http')) {
+        return Image.network(
+          vehicle.imageUrl!,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          errorBuilder: (context, error, stackTrace) => Center(
+            child: TruckIllustration(
+              tyreCount: vehicle.tyreCount,
+              color: truckColor,
+              size: const Size(140, 60),
+            ),
+          ),
+        );
+      } else {
+        return Image.file(
+          File(vehicle.imageUrl!),
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          errorBuilder: (context, error, stackTrace) => Center(
+            child: TruckIllustration(
+              tyreCount: vehicle.tyreCount,
+              color: truckColor,
+              size: const Size(140, 60),
+            ),
+          ),
+        );
+      }
+    }
+    return Center(
+      child: TruckIllustration(
+        tyreCount: vehicle.tyreCount,
+        color: truckColor,
+        size: const Size(140, 60),
+      ),
+    );
+  }
+
+  Widget _buildModalRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required bool isDark,
+    bool isHighlighted = false,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: const Color(0xFF1565C0)),
+        const SizedBox(width: 10),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: isDark ? Colors.white60 : const Color(0xFF64748B),
+          ),
+        ),
+        const Spacer(),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: isHighlighted ? FontWeight.w800 : FontWeight.w600,
+            letterSpacing: isHighlighted ? 0.5 : 0,
+            color: isHighlighted
+                ? const Color(0xFF1565C0)
+                : (isDark ? Colors.white : const Color(0xFF0F2C59)),
+          ),
+        ),
+      ],
+    );
+  }
 
   Future<void> _pickAndUploadProfileImage(ImageSource source) async {
     Navigator.pop(context); // close bottom sheet
@@ -275,6 +643,8 @@ class ProfileScreenState extends State<ProfileScreen> {
           followingCount: stats.followingCount,
         );
       }
+
+      await _loadVehicles();
 
       if (mounted) {
         setState(() {
@@ -567,6 +937,10 @@ class ProfileScreenState extends State<ProfileScreen> {
     try {
       await _authRepository.logout();
       if (mounted) {
+        setState(() {
+          _vehicles = [];
+          _ownUserId = null;
+        });
         Navigator.pop(context); // Remove loading dialog
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -769,19 +1143,35 @@ class ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(
         backgroundColor: isDark ? const Color(0xFF0A0A1A) : Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: isDark ? Colors.white : const Color(0xFF1A1A2E),
-            size: 20,
+        leading: Padding(
+          padding: const EdgeInsets.all(10),
+          child: GestureDetector(
+            onTap: () {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFEBF3FF),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Navigator.canPop(context)
+                    ? Icons.arrow_back_ios_new_rounded
+                    : Icons.person_rounded,
+                color: isDark ? const Color(0xFF4A90D9) : const Color(0xFF1565C0),
+                size: Navigator.canPop(context) ? 18 : 22,
+              ),
+            ),
           ),
-          onPressed: () => Navigator.maybePop(context),
         ),
         title: RichText(
           text: TextSpan(
             style: const TextStyle(
-              fontSize: 20,
+              fontSize: 22,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.5,
             ),
@@ -801,63 +1191,73 @@ class ProfileScreenState extends State<ProfileScreen> {
         ),
         centerTitle: true,
         actions: [
-          PopupMenuButton<String>(
-            icon: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF1A1A2E)
-                    : const Color(0xFFEBF3FF),
-                borderRadius: BorderRadius.circular(10),
+          Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                highlightColor: Colors.transparent,
+                splashColor: Colors.transparent,
               ),
-              child: Icon(
-                Icons.settings_outlined,
-                color: isDark
-                    ? const Color(0xFF4A90D9)
-                    : const Color(0xFF1565C0),
-                size: 20,
+              child: PopupMenuButton<String>(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF1A1A2E)
+                        : const Color(0xFFEBF3FF),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.settings_outlined,
+                    color: isDark
+                        ? const Color(0xFF4A90D9)
+                        : const Color(0xFF1565C0),
+                    size: 20,
+                  ),
+                ),
+                onSelected: (value) {
+                  if (value == 'change_theme') {
+                    _showThemeSelectionDialog();
+                  } else if (value == 'logout') {
+                    _handleLogout();
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'change_theme',
+                    child: Row(
+                      children: const [
+                        Icon(Icons.palette_outlined,
+                            size: 20, color: Color(0xFF1565C0)),
+                        SizedBox(width: 10),
+                        Text('Change Theme'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  PopupMenuItem(
+                    value: 'logout',
+                    child: Row(
+                      children: const [
+                        Icon(Icons.logout_rounded,
+                            size: 20, color: Colors.redAccent),
+                        SizedBox(width: 10),
+                        Text(
+                          'Logout',
+                          style: TextStyle(
+                              color: Colors.redAccent,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            onSelected: (value) {
-              if (value == 'change_theme') {
-                _showThemeSelectionDialog();
-              } else if (value == 'logout') {
-                _handleLogout();
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'change_theme',
-                child: Row(
-                  children: const [
-                    Icon(Icons.palette_outlined,
-                        size: 20, color: Color(0xFF1565C0)),
-                    SizedBox(width: 10),
-                    Text('Change Theme'),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              PopupMenuItem(
-                value: 'logout',
-                child: Row(
-                  children: const [
-                    Icon(Icons.logout_rounded,
-                        size: 20, color: Colors.redAccent),
-                    SizedBox(width: 10),
-                    Text(
-                      'Logout',
-                      style: TextStyle(
-                          color: Colors.redAccent,
-                          fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ),
-          const SizedBox(width: 8),
         ],
       ),
       body: SafeArea(
@@ -883,10 +1283,31 @@ class ProfileScreenState extends State<ProfileScreen> {
                     SliverToBoxAdapter(
                       child: ProfileHeader(
                         profile: _profile,
-                        postsCount: kMockVehicles.length,
+                        postsCount: _vehicles.length,
                         onAvatarTapped: _showImageSourceSheet,
                         onEditLocation: _showEditLocationSheet,
                         isLoading: _isProfilePicLoading,
+                        onAddVehicle: () async {
+                          final result = await Navigator.push<VehicleForm>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AddVehicleScreen(),
+                            ),
+                          );
+                          if (result != null) {
+                            final newVehicle = Vehicle(
+                              id: DateTime.now().millisecondsSinceEpoch.toString(),
+                              tyreType: result.bodyType,
+                              tyreCount: result.tyreCount,
+                              vehicleNumber: result.vehicleNumber,
+                              imageUrl: result.imageUrl,
+                            );
+                            setState(() {
+                              _vehicles.insert(0, newVehicle);
+                            });
+                            await _saveVehicles();
+                          }
+                        },
                         onFollowersTap: _ownUserId == null
                             ? null
                             : () => Navigator.push(
@@ -912,14 +1333,14 @@ class ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
 
-                    // Vehicles grid (always shown, mock data for now)
+                    // Vehicles grid (shows only user added vehicles)
                     SliverPadding(
                       padding: const EdgeInsets.only(top: 2),
                       sliver: SliverToBoxAdapter(
                         child: VehiclesGrid(
-                          onVehicleTap: (vehicle) {
-                            // TODO: show vehicle detail sheet
-                          },
+                          vehicles: _vehicles,
+                          onVehicleTap: _showVehicleDetailModal,
+                          onVehicleDelete: _confirmDeleteVehicle,
                         ),
                       ),
                     ),

@@ -1,53 +1,29 @@
-﻿import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:flutter/material.dart';
 import '../../domain/entities/vehicle.dart';
 import 'package:truck_mate/core/widgets/truck_illustration.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Mock vehicle list — matches the screenshot.
-// TODO: Replace with real API data when backend is ready.
+// Mock vehicle list — kept as reference if needed.
 // ─────────────────────────────────────────────────────────────────────────────
 final List<Vehicle> kMockVehicles = [
   const Vehicle(
     id: 'v1',
-    tyreType: '6 Tyre · Container',
+    tyreType: 'Container',
     tyreCount: 6,
+    vehicleNumber: 'TN 45 AB 1234',
     driverName: 'Ravi Kumar',
     driverRating: '4.8',
     driverStatus: 'On duty',
   ),
   const Vehicle(
     id: 'v2',
-    tyreType: '10 Tyre · Open Body',
+    tyreType: 'Open Body',
     tyreCount: 10,
+    vehicleNumber: 'TN 45 CD 5678',
     driverName: 'Murugan P.',
     driverRating: '4.6',
     driverStatus: 'On duty',
-  ),
-  const Vehicle(
-    id: 'v3',
-    tyreType: '4 Tyre · Mini (Dost)',
-    tyreCount: 4,
-  ),
-  const Vehicle(
-    id: 'v4',
-    tyreType: '6 Tyre · Container',
-    tyreCount: 6,
-  ),
-  const Vehicle(
-    id: 'v5',
-    tyreType: '8 Tyre · Tanker',
-    tyreCount: 8,
-    driverName: 'Selvam V.',
-    driverRating: '4.5',
-    driverStatus: 'On duty',
-  ),
-  const Vehicle(
-    id: 'v6',
-    tyreType: '4 Tyre · Mini (Dost)',
-    tyreCount: 4,
-    driverName: 'Arun K.',
-    driverRating: '4.3',
-    driverStatus: 'Off duty',
   ),
 ];
 
@@ -55,20 +31,76 @@ final List<Vehicle> kMockVehicles = [
 // Main grid widget
 // ─────────────────────────────────────────────────────────────────────────────
 class VehiclesGrid extends StatelessWidget {
-  final List<Vehicle>? vehicles; // null → use mock data
+  final List<Vehicle>? vehicles;
   final Function(Vehicle)? onVehicleTap;
+  final Function(Vehicle)? onVehicleDelete;
 
   const VehiclesGrid({
     super.key,
     this.vehicles,
     this.onVehicleTap,
+    this.onVehicleDelete,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pageBg = isDark ? Colors.black : const Color(0xFFEBF3FF);
-    final list = vehicles ?? kMockVehicles;
+    final list = vehicles ?? const [];
+
+    if (list.isEmpty) {
+      return Container(
+        color: pageBg,
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark ? const Color(0xFF262626) : const Color(0xFFE2E8F0),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFEBF3FF),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.local_shipping_outlined,
+                  color: Color(0xFF1565C0),
+                  size: 28,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'No Vehicles Added Yet',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white : const Color(0xFF0F2C59),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Tap "Add vehicle" above to add your first vehicle.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Container(
       color: pageBg,
@@ -87,6 +119,9 @@ class VehiclesGrid extends StatelessWidget {
           return _VehicleCard(
             vehicle: list[index],
             onTap: () => onVehicleTap?.call(list[index]),
+            onDelete: onVehicleDelete != null
+                ? () => onVehicleDelete!(list[index])
+                : null,
           );
         },
       ),
@@ -100,8 +135,13 @@ class VehiclesGrid extends StatelessWidget {
 class _VehicleCard extends StatelessWidget {
   final Vehicle vehicle;
   final VoidCallback onTap;
+  final VoidCallback? onDelete;
 
-  const _VehicleCard({required this.vehicle, required this.onTap});
+  const _VehicleCard({
+    required this.vehicle,
+    required this.onTap,
+    this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -133,18 +173,43 @@ class _VehicleCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Tyre type label ────────────────────────────────────
+            // ── Tyre type label & delete button ────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-              child: Text(
-                vehicle.tyreType,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: labelColor,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              padding: const EdgeInsets.fromLTRB(12, 10, 8, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      vehicle.tyreType,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: labelColor,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (onDelete != null)
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: onDelete,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.red.withValues(alpha: 0.15)
+                              : Colors.red.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Icon(
+                          Icons.delete_outline_rounded,
+                          size: 16,
+                          color: isDark ? const Color(0xFFEF4444) : const Color(0xFFDC2626),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
 
@@ -160,25 +225,7 @@ class _VehicleCard extends StatelessWidget {
                         color: truckBg,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: vehicle.imageUrl != null &&
-                              vehicle.imageUrl!.isNotEmpty
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.network(
-                                vehicle.imageUrl!,
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    _TruckPlaceholder(
-                                  tyreCount: vehicle.tyreCount,
-                                  color: truckColor,
-                                ),
-                              ),
-                            )
-                          : _TruckPlaceholder(
-                              tyreCount: vehicle.tyreCount,
-                              color: truckColor,
-                            ),
+                      child: _buildVehicleImage(truckColor),
                     ),
                   ),
 
@@ -234,13 +281,21 @@ class _VehicleCard extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Tap + to add driver',
+                          vehicle.vehicleNumber != null && vehicle.vehicleNumber!.isNotEmpty
+                              ? vehicle.vehicleNumber!
+                              : 'Tap + to add driver',
                           style: TextStyle(
                             fontSize: 11,
+                            fontWeight: vehicle.vehicleNumber != null && vehicle.vehicleNumber!.isNotEmpty
+                                ? FontWeight.w600
+                                : FontWeight.normal,
                             color: isDark
                                 ? const Color(0xFFB0B8D0)
                                 : const Color(0xFF6B7280),
+                            letterSpacing: vehicle.vehicleNumber != null && vehicle.vehicleNumber!.isNotEmpty ? 0.3 : 0,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -248,6 +303,44 @@ class _VehicleCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildVehicleImage(Color truckColor) {
+    if (vehicle.imageUrl != null && vehicle.imageUrl!.isNotEmpty) {
+      if (vehicle.imageUrl!.startsWith('http')) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.network(
+            vehicle.imageUrl!,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+            errorBuilder: (context, error, stackTrace) => _TruckPlaceholder(
+              tyreCount: vehicle.tyreCount,
+              color: truckColor,
+            ),
+          ),
+        );
+      } else {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.file(
+            File(vehicle.imageUrl!),
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+            errorBuilder: (context, error, stackTrace) => _TruckPlaceholder(
+              tyreCount: vehicle.tyreCount,
+              color: truckColor,
+            ),
+          ),
+        );
+      }
+    }
+    return _TruckPlaceholder(
+      tyreCount: vehicle.tyreCount,
+      color: truckColor,
     );
   }
 }
@@ -258,7 +351,11 @@ class _VehicleCard extends StatelessWidget {
 class _TruckPlaceholder extends StatelessWidget {
   final int tyreCount;
   final Color color;
-  const _TruckPlaceholder({required this.tyreCount, required this.color});
+
+  const _TruckPlaceholder({
+    required this.tyreCount,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -266,44 +363,37 @@ class _TruckPlaceholder extends StatelessWidget {
       child: TruckIllustration(
         tyreCount: tyreCount,
         color: color,
-        size: const Size(130, 55),
+        size: const Size(110, 48),
       ),
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Driver badge — blue circle with initials
+// Driver badge with initials (e.g. "RK", "MP")
 // ─────────────────────────────────────────────────────────────────────────────
 class _DriverBadge extends StatelessWidget {
   final String initials;
+
   const _DriverBadge({required this.initials});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1565C0),
+      width: 28,
+      height: 28,
+      decoration: const BoxDecoration(
+        color: Color(0xFF0F2C59),
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1565C0).withValues(alpha: 0.4),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Center(
         child: Text(
           initials,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.5,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
           ),
         ),
       ),
@@ -312,7 +402,7 @@ class _DriverBadge extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Add-driver badge — amber circle with + icon
+// Orange "+" badge when no driver is assigned
 // ─────────────────────────────────────────────────────────────────────────────
 class _AddDriverBadge extends StatelessWidget {
   const _AddDriverBadge();
@@ -320,12 +410,11 @@ class _AddDriverBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 32,
-      height: 32,
+      width: 26,
+      height: 26,
       decoration: BoxDecoration(
         color: const Color(0xFFF59E0B),
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 2),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
@@ -334,7 +423,11 @@ class _AddDriverBadge extends StatelessWidget {
           ),
         ],
       ),
-      child: const Icon(Icons.add, color: Colors.white, size: 18),
+      child: const Icon(
+        Icons.add,
+        color: Colors.white,
+        size: 16,
+      ),
     );
   }
 }

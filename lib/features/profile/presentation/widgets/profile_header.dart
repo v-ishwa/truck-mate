@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../domain/entities/user_profile.dart';
 
 class ProfileHeader extends StatefulWidget {
@@ -8,6 +8,7 @@ class ProfileHeader extends StatefulWidget {
   final VoidCallback? onEditLocation;
   final VoidCallback? onFollowersTap;
   final VoidCallback? onFollowingTap;
+  final VoidCallback? onAddVehicle;
   final bool isLoading;
 
   const ProfileHeader({
@@ -18,6 +19,7 @@ class ProfileHeader extends StatefulWidget {
     this.onEditLocation,
     this.onFollowersTap,
     this.onFollowingTap,
+    this.onAddVehicle,
     this.isLoading = false,
   });
 
@@ -293,7 +295,7 @@ class _ProfileHeaderState extends State<ProfileHeader> {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
-                    onPressed: () {},
+                    onPressed: widget.onAddVehicle,
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 11),
                       shape: RoundedRectangleBorder(

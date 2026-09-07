@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'profile/presentation/screens/profile_screen.dart';
 import 'profile/presentation/screens/search_user_screen.dart';
 import 'posts/presentation/screens/posts_feed_screen.dart';
-import 'posts/presentation/screens/add_post_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -24,20 +23,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     super.initState();
     _pages = [
       PostsFeedScreen(key: _feedKey),
-      AddPostScreen(
-        onPostPublished: () {
-          setState(() {
-            _selectedIndex = 0; // Redirect to Home Feed tab
-          });
-          // Refresh the feed to show the newly added post
-          _feedKey.currentState?.refreshFeed();
-        },
-      ),
       SearchUserScreen(
         key: _searchKey,
         onSetLocationRequested: () {
           setState(() {
-            _selectedIndex = 3; // Redirect to Profile tab
+            _selectedIndex = 2; // Redirect to Profile tab
           });
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _profileKey.currentState?.showEditLocationSheet();
@@ -49,11 +39,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         onPostDeleted: () {
           _feedKey.currentState?.refreshFeed();
         },
-        onNavigateToAddPost: () {
-          setState(() {
-            _selectedIndex = 1;
-          });
-        },
       ),
     ];
   }
@@ -62,9 +47,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     setState(() {
       _selectedIndex = index;
     });
-    if (index == 2) {
+    if (index == 1) {
       _searchKey.currentState?.refreshLocationAndUsers();
-    } else if (index == 3) {
+    } else if (index == 2) {
       _profileKey.currentState?.refreshProfile();
     }
   }
@@ -99,9 +84,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildNavItem(0, Icons.home_filled, Icons.home_outlined, 'Home'),
-                _buildNavItem(1, Icons.add_box, Icons.add_box_outlined, 'Add'),
-                _buildNavItem(2, Icons.search, Icons.search_outlined, 'Search'),
-                _buildNavItem(3, Icons.person, Icons.person_outline, 'Profile'),
+                _buildNavItem(1, Icons.search, Icons.search_outlined, 'Search'),
+                _buildNavItem(2, Icons.person, Icons.person_outline, 'Profile'),
               ],
             ),
           ),
